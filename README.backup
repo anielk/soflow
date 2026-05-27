@@ -1,0 +1,153 @@
+# Creator Platform - Phase 1 Foundation
+Production-ready local development and deployment foundation for a scalable creator CRM/chat analytics platform.
+
+## 1) Stack
+- Frontend: Next.js (TypeScript, App Router, TailwindCSS)
+- Backend: NestJS (TypeScript)
+- ORM: Prisma
+- Database: PostgreSQL
+- Cache/Realtime foundation: Redis
+- Runtime: Docker + Docker Compose
+- Reverse proxy: NGINX-ready configuration
+
+## 2) Project Structure
+```text
+creator-platform/
+├── frontend/                 # Next.js app
+├── backend/                  # NestJS app + Prisma
+├── docker/                   # Dockerfiles
+├── nginx/                    # Reverse proxy config
+├── scripts/                  # Utility scripts
+├── .env                      # Development environment variables
+├── .env.production.example   # Production env template
+├── docker-compose.yml        # Development stack
+├── docker-compose.prod.yml   # Production-ready override
+└── README.md
+```
+
+## 3) Prerequisites
+- Ubuntu 24.04 (or compatible Linux)
+- Docker Engine + Docker Compose plugin
+
+Install on Ubuntu:
+1. `sudo apt update`
+2. `sudo apt install -y docker.io docker-compose-v2`
+3. `sudo usermod -aG docker $USER`
+4. Re-login (or reboot) to apply docker group permissions
+
+## 4) Environment Variables
+Root `.env` controls container runtime and app config.
+
+Key variables:
+- `FRONTEND_PORT` (default `3000`)
+- `BACKEND_PORT` (default `4000`)
+- `POSTGRES_PORT` (default `5432`)
+- `REDIS_PORT` (default `6379`)
+- `DATABASE_URL`
+- `REDIS_URL`
+- `NEXT_PUBLIC_API_URL`
+
+Service-specific templates:
+- `frontend/.env.example`
+- `backend/.env.example`
+
+For production:
+1. Copy `.env.production.example` to `.env.production`
+2. Set secure secrets/passwords
+3. Use production compose profile (see section 7)
+
+## 5) Local Development (Docker)
+Startup:
+```bash
+docker compose up -d --build
+```
+
+Stop:
+```bash
+docker compose down
+```
+
+Logs:
+```bash
+docker compose logs -f --tail=200
+```
+
+Services:
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:4000/api`
+- Health endpoint: `http://localhost:4000/api/health`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+
+Hot reload:
+- Frontend and backend source are bind-mounted into containers
+- Dev commands run with watch mode (`next dev`, `nest start --watch`)
+
+## 6) Docker Architecture Notes
+- Four core containers in development:
+  - `creator-frontend`
+  - `creator-backend`
+  - `creator-postgres`
+  - `creator-redis`
+- Internal bridge network: `creator-network`
+- Named volumes:
+  - `creator-postgres-data` (persistent DB storage)
+  - `creator-redis-data`
+  - Node modules volumes for frontend/backend
+- Restart policy: `unless-stopped`
+- Health checks configured for PostgreSQL and Redis
+
+## 7) Production-Ready Deployment Flow
+This repository includes NGINX-ready setup via `docker-compose.prod.yml` and `nginx/default.conf`.
+
+Example production launch:
+```bash
+cp .env.production.example .env.production
+# edit .env.production with secure values
+docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Reverse proxy behavior:
+- `/` -> frontend service
+- `/api/` -> backend service
+- WebSocket upgrade headers are enabled for realtime endpoints
+
+## 8) Backend Foundation (NestJS)
+Implemented:
+- Global config module with Joi environment validation
+- Prisma module and service
+- Redis module and service
+- Health module with `/api/health` endpoint
+- Strict global request validation pipe
+
+Primary backend directories:
+- `backend/src/config`
+- `backend/src/health`
+- `backend/src/prisma`
+- `backend/src/redis`
+
+## 9) Frontend Foundation (Next.js)
+Implemented:
+- App Router (`src/app`)
+- TailwindCSS configuration
+- Clean starter page
+- API base URL helper in `src/lib/api.ts`
+
+## 10) Utility Scripts
+Make scripts executable:
+```bash
+chmod +x scripts/*.sh
+```
+
+Scripts:
+- `scripts/start-dev.sh`: Build and run development stack
+- `scripts/rebuild.sh`: Rebuild all images from scratch
+- `scripts/backup-db.sh`: Dump PostgreSQL database to `backups/`
+
+## 11) Next Phase Recommendations
+- Add CI workflow (lint/typecheck/tests/build)
+- Add database migration workflow in deployment pipeline
+- Add structured logging and centralized observability
+- Add application-level health checks (db/redis dependency checks)
+
+Phase 1 intentionally excludes business logic, auth, dashboard features, and UI system design.

@@ -1,0 +1,121 @@
+services:
+  frontend:
+    container_name: creator-frontend
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      PORT: ${FRONTEND_PORT}
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - creator-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: "1000:1000"
+
+  backend:
+    container_name: creator-backend
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+      target: production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      PORT: ${BACKEND_PORT}
+    ports:
+      - "${BACKEND_PORT}:4000"
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - creator-network
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    user: "1000:1000"
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 2048
+        hard: 4096
+
+  postgres:
+    container_name: creator-postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - creator-network
+
+  redis:
+    container_name: creator-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - creator-network
+
+networks:
+  creator-network:
+    name: creator-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: creator-postgres-data
+  redis_data:
+    name: creator-redis-data
+  frontend_node_modules:
+    name: creator-frontend-node-modules
+  backend_node_modules:
+    name: creator-backend-node-modules
