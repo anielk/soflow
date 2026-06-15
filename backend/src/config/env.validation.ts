@@ -1,26 +1,11 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import * as Joi from 'joi';
 
-enum Environment {
-  Development = 'development',
-  Production = 'production',
-  Test = 'test',
-}
-
-export class EnvironmentVariables {
-  @IsEnum(Environment)
-  NODE_ENV!: Environment;
-
-  @IsNumber()
-  PORT!: number;
-
-  @IsString()
-  JWT_SECRET!: string;
-
-  @IsString()
-  DATABASE_URL!: string;
-
-  @IsString()
-  REDIS_URL!: string;
-}
-
-export const envValidationSchema = new EnvironmentVariables();
+export const envValidationSchema = Joi.object({
+  NODE_ENV: Joi.string()
+    .valid('development', 'production', 'test')
+    .default('development'),
+  PORT: Joi.number().default(4000),
+  JWT_SECRET: Joi.string().required(),
+  DATABASE_URL: Joi.string().required(),
+  REDIS_URL: Joi.string().required(),
+});

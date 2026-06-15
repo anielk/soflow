@@ -3,9 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { Request, Response, NextFunction } from 'express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+  
+  // Set WebSocket adapter explicitly to avoid "No driver (WebSockets) has been selected" error
+  app.useWebSocketAdapter(new IoAdapter(app.getHttpServer()));
   
   // Security headers
   app.use(async (req: Request, res: Response, next: NextFunction) => {

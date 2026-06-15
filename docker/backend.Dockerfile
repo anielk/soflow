@@ -11,10 +11,16 @@ RUN npm run prisma:generate
 EXPOSE 4000
 CMD ["npm", "run", "start:dev"]
 
-FROM base AS production
-ENV NODE_ENV=production
+FROM base AS builder
 COPY backend/ ./
 RUN npm run prisma:generate
 RUN npm run build
+
+FROM base AS production
+ENV NODE_ENV=production
+COPY backend/ ./
+RUN npm ci --omit=dev --no-audit --no-fund
+RUN npm run prisma:generate
+COPY --from=builder /app/dist ./dist
 EXPOSE 4000
-CMD ["npm", "run", "start:prod"]
+CMD ["node", "dist/main"]

@@ -20,3 +20,63 @@ export async function apiGet<T>(path: string): Promise<T> {
 
   return (await response.json()) as T;
 }
+
+export async function apiPost<T>(path: string, data: unknown): Promise<T> {
+  const base = getApiBaseUrl().replace(/\/$/, '');
+  const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiPut<T>(path: string, data: unknown): Promise<T> {
+  const base = getApiBaseUrl().replace(/\/$/, '');
+  const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  const base = getApiBaseUrl().replace(/\/$/, '');
+  const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed with status ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+export const apiClient = {
+  get: apiGet,
+  post: apiPost,
+  put: apiPut,
+  delete: apiDelete,
+};
