@@ -12,8 +12,27 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   passwordHash  String
+  name          String?
+  bio           String?
+  avatarUrl     String?
+  isCreator     Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  creatorProfile CreatorProfile?
+}
+
+model CreatorProfile {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  name         String?
+  bio          String?
+  avatarUrl    String?
+  website      String?
+  socialLinks  Json?
+  verified     Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id])
 }
 
 model HealthSnapshot {

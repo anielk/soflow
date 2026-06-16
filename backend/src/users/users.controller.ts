@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from '@prisma/client';
 
@@ -9,5 +9,17 @@ export class UsersController {
   @Get()
   async findAll(): Promise<User[]> {
     return this.usersService.findAll();
+  }
+
+  @Get('profile')
+  async getProfile() {
+    // This will be implemented with proper authentication
+    return { message: 'Profile endpoint' };
+  }
+
+  @Put('profile')
+  async updateProfile(@Body() profileDto: any) {
+    // This will be implemented with proper authentication
+    return { message: 'Profile updated', data: profileDto };
   }
 }

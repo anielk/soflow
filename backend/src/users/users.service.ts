@@ -1,10 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User } from '@prisma/client';
+import { User, CreatorProfile } from '@prisma/client';
 
 interface UserData {
   email: string;
   passwordHash: string;
+}
+
+interface UpdateProfileDto {
+  name?: string;
+  bio?: string;
+  avatarUrl?: string;
+  website?: string;
+  socialLinks?: Record<string, string>;
 }
 
 @Injectable()
@@ -27,5 +35,59 @@ export class UsersService {
     return this.prisma.user.create({
       data: userData,
     });
+  }
+
+  async getProfile(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        creatorProfile: true,
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      ...user,
+      creatorProfile: user.creatorProfile || null,
+    };
+  }
+
+  async updateProfile(userId: string, profileData: UpdateProfileDto): Promise<any> {
+    // First check if the user has a creator profile
+    let creatorProfile = await this.prisma.creatorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (!creatorProfile) {
+      // Create new creator profile if it doesn't exist
+      creatorProfile = await this.prisma.creatorProfile.create({
+        data: {
+          userId,
+          ...profileData,
+        },
+      });
+    } else {
+      // Update existing creator profile
+      creatorProfile = await this.prisma.creatorProfile.update({
+        where: { userId },
+        data: profileData,
+      });
+    }
+
+    // Return updated user with profile
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        creatorProfile: true,
+      },
+    });
+
+    return {
+      ...user,
+      creatorProfile,
+    };
   }
 }

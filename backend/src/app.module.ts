@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { ConfigModule as AppConfigModule } from './config/config.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { CreatorsModule } from './creators/creators.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { ConfigModule as AppConfigModule } from './config/config.module';
     UsersModule,
     WebsocketModule,
     AppConfigModule,
+    DashboardModule,
+    CreatorsModule,
   ],
 })
 export class AppModule {}

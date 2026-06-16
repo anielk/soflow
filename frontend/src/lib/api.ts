@@ -74,6 +74,15 @@ export async function apiDelete<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+// Authentication functions
+export async function registerUser(userData: { email: string; password: string; username?: string }) {
+  return apiPost<{ access_token: string }>('/v1/auth/register', userData);
+}
+
+export async function loginUser(credentials: { email: string; password: string }) {
+  return apiPost<{ access_token: string }>('/v1/auth/login', credentials);
+}
+
 export const apiClient = {
   get: apiGet,
   post: apiPost,
