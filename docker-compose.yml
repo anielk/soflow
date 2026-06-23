@@ -8,9 +8,12 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
+
     environment:
       NODE_ENV: development
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+     # Use relative URL so browser requests go through Next.js rewrites to backend container
+      NEXT_PUBLIC_API_URL: /v1
+      BACKEND_PROXY_URL: http://backend:4000
     ports:
       - "${FRONTEND_PORT}:3000"
     depends_on:
@@ -26,7 +29,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
-      target: production
+      target: development
     restart: unless-stopped
     env_file:
       - .env.production
@@ -42,7 +45,6 @@ services:
       - ./backend/prisma:/app/prisma
       - ./backend/.env.production:/app/.env.production
       - ./backend/package.json:/app/package.json
-      - backend_node_modules:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -52,17 +54,15 @@ services:
       - creator-network
     security_opt:
       - no-new-privileges:true
-    read_only: true
     tmpfs:
       - /tmp
       - /app/node_modules/.cache
-    user: "1000:1000"
     ulimits:
       nproc: 65535
       nofile:
         soft: 2048
         hard: 4096
-    command: npm run start:prod
+    command: npm run start:dev
 
   postgres:
     container_name: creator-postgres
@@ -115,5 +115,3 @@ volumes:
     name: creator-redis-data
   frontend_node_modules:
     name: creator-frontend-node-modules
-  backend_node_modules:
-    name: creator-backend-node-modules

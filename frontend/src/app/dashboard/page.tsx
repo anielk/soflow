@@ -23,11 +23,11 @@ export default function DashboardPage() {
     const fetchDashboardData = async () => {
       try {
         // Fetch user profile
-        const userProfile = await apiGet<any>('/v1/users/profile');
+        const userProfile = await apiGet<any>('/users/profile');
         setUser(userProfile);
         
         // Fetch dashboard stats
-        const dashboardStats = await apiGet<any>('/v1/dashboard/stats');
+        const dashboardStats = await apiGet<any>('/dashboard/stats');
         setStats(dashboardStats);
         
         setLoading(false);

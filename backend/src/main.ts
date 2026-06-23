@@ -42,7 +42,7 @@ async function bootstrap(): Promise<void> {
     next();
   });
 
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('v1', { exclude: [''] });
   app.enableCors();
   app.useGlobalPipes(
     new ValidationPipe({
@@ -56,7 +56,7 @@ async function bootstrap(): Promise<void> {
   const port = process.env.PORT ? Number(process.env.PORT) : 4000;
   await app.listen(port, '0.0.0.0');
   
-  Logger.log(`Application is running on: http://localhost:${port}/api/v1`, 'Bootstrap');
+  Logger.log(`Application is running on: http://localhost:${port}/v1`, 'Bootstrap');
 }
 
 void bootstrap();

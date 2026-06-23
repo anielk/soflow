@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, CreatorProfile } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 interface UserData {
   email: string;
@@ -53,6 +54,29 @@ export class UsersService {
       ...user,
       creatorProfile: user.creatorProfile || null,
     };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      throw new Error('Current password is incorrect');
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashedPassword },
+    });
+
+    return true;
   }
 
   async updateProfile(userId: string, profileData: UpdateProfileDto): Promise<any> {

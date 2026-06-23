@@ -29,7 +29,7 @@ export default function CreatorProfileEditor() {
 
     const fetchProfile = async () => {
       try {
-        const userProfile = await apiGet<any>('/v1/users/profile');
+        const userProfile = await apiGet<any>('/users/profile');
         setProfile({
           name: userProfile.name || '',
           bio: userProfile.bio || '',
@@ -60,7 +60,7 @@ export default function CreatorProfileEditor() {
     setSuccess('');
 
     try {
-      await apiPut('/v1/users/profile', profile);
+      await apiPut('/users/profile', profile);
       setSuccess('Profile updated successfully!');
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);

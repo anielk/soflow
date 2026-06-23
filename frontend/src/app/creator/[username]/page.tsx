@@ -15,7 +15,7 @@ export default function PublicCreatorPage({ params }: { params: Promise<{ userna
     const fetchCreator = async () => {
       try {
         const { username } = await params;
-        const creatorData = await apiGet(`/v1/creators/${username}`);
+        const creatorData = await apiGet(`/creators/${username}`);
         setCreator(creatorData);
         setLoading(false);
       } catch (err) {

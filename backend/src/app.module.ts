@@ -10,6 +10,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { ConfigModule as AppConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CreatorsModule } from './creators/creators.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -28,5 +29,6 @@ import { CreatorsModule } from './creators/creators.module';
     DashboardModule,
     CreatorsModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

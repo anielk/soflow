@@ -1,4 +1,4 @@
-const FALLBACK_API_URL = 'http://localhost:4000/api';
+const FALLBACK_API_URL = 'http://localhost:4000/v1';
 
 export function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_URL ?? FALLBACK_API_URL;
@@ -6,10 +6,12 @@ export function getApiBaseUrl(): string {
 
 export async function apiGet<T>(path: string): Promise<T> {
   const base = getApiBaseUrl().replace(/\/$/, '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     cache: 'no-store',
   });
@@ -23,10 +25,12 @@ export async function apiGet<T>(path: string): Promise<T> {
 
 export async function apiPost<T>(path: string, data: unknown): Promise<T> {
   const base = getApiBaseUrl().replace(/\/$/, '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     cache: 'no-store',
     body: JSON.stringify(data),
@@ -41,10 +45,12 @@ export async function apiPost<T>(path: string, data: unknown): Promise<T> {
 
 export async function apiPut<T>(path: string, data: unknown): Promise<T> {
   const base = getApiBaseUrl().replace(/\/$/, '');
+  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
   const response = await fetch(`${base}/${path.replace(/^\//, '')}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     cache: 'no-store',
     body: JSON.stringify(data),
@@ -76,11 +82,15 @@ export async function apiDelete<T>(path: string): Promise<T> {
 
 // Authentication functions
 export async function registerUser(userData: { email: string; password: string; username?: string }) {
-  return apiPost<{ access_token: string }>('/v1/auth/register', userData);
+  return apiPost<{ access_token: string }>('/auth/register', userData);
 }
 
 export async function loginUser(credentials: { email: string; password: string }) {
-  return apiPost<{ access_token: string }>('/v1/auth/login', credentials);
+  return apiPost<{ access_token: string }>('/auth/login', credentials);
+}
+
+export async function changePassword(dto: { currentPassword: string; newPassword: string }) {
+  return apiPut<{ success: boolean; message: string }>('/users/change-password', dto);
 }
 
 export const apiClient = {
