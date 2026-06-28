@@ -33,13 +33,13 @@ export class WebSocketClient {
     }
   }
 
-  emit(event: string, data?: any) {
+  emit(event: string, data?: unknown) {
     if (this.socket) {
       this.socket.emit(event, data);
     }
   }
 
-  on(event: string, callback: (data: any) => void) {
+  on(event: string, callback: (data: unknown) => void) {
     if (this.socket) {
       this.socket.on(event, callback);
     }

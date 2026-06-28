@@ -1,0 +1,140 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Settings, LogOut, ChevronDown, Layers } from 'lucide-react';
+import { Avatar } from '@/components/ui';
+import { SidebarItem } from './SidebarItem';
+import { SidebarGroup } from './SidebarGroup';
+import { navConfig, type NavEntry } from '@/lib/nav-config';
+import { logout } from '@/lib/auth';
+
+interface SidebarProps {
+  collapsed?: boolean;
+}
+
+function isActive(href: string, pathname: string): boolean {
+  if (href === '/dashboard') return pathname === '/dashboard';
+  return pathname.startsWith(href);
+}
+
+export function Sidebar({ collapsed = false }: SidebarProps) {
+  const pathname = usePathname();
+
+  function renderEntry(entry: NavEntry) {
+    if (entry.kind === 'divider') {
+      return <div key={entry.id} className="h-px bg-bg-border mx-2 my-1" />;
+    }
+
+    if (entry.kind === 'item') {
+      return (
+        <SidebarItem
+          key={entry.id}
+          icon={entry.icon}
+          label={entry.label}
+          href={entry.href}
+          badge={entry.badge}
+          active={isActive(entry.href, pathname)}
+          collapsed={collapsed}
+        />
+      );
+    }
+
+    // kind === 'group'
+    return (
+      <SidebarGroup
+        key={entry.id}
+        id={entry.id}
+        label={entry.label}
+        defaultOpen={entry.defaultOpen}
+        collapsed={collapsed}
+      >
+        {entry.items.map((item) => (
+          <SidebarItem
+            key={item.id}
+            icon={item.icon}
+            label={item.label}
+            href={item.href}
+            badge={item.badge}
+            active={isActive(item.href, pathname)}
+            indent={!collapsed}
+            collapsed={collapsed}
+          />
+        ))}
+      </SidebarGroup>
+    );
+  }
+
+  return (
+    <aside
+      className={[
+        'fixed left-0 top-0 h-screen flex flex-col bg-bg-surface border-r border-bg-border z-30',
+        'transition-all duration-200',
+        collapsed ? 'w-sidebar-collapsed' : 'w-sidebar',
+      ].join(' ')}
+    >
+      {/* Logo + workspace */}
+      <div className={[
+        'flex items-center border-b border-bg-border shrink-0',
+        collapsed ? 'h-14 justify-center px-0' : 'h-14 px-4 gap-2',
+      ].join(' ')}>
+        <div className="w-7 h-7 rounded-md bg-violet-600 flex items-center justify-center shrink-0">
+          <Layers size={14} className="text-white" />
+        </div>
+        {!collapsed && (
+          <>
+            <span className="text-sm font-semibold text-text-primary tracking-tight">Soflow</span>
+            <button className="ml-auto text-text-muted hover:text-text-secondary transition-colors">
+              <ChevronDown size={14} />
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-1">
+        {navConfig.map(renderEntry)}
+      </nav>
+
+      {/* User footer */}
+      <div className={[
+        'border-t border-bg-border shrink-0',
+        collapsed ? 'p-2 flex flex-col items-center gap-2' : 'p-3',
+      ].join(' ')}>
+        {collapsed ? (
+          <>
+            <Avatar name="User" size="sm" />
+            <Link href="/settings" className="text-text-muted hover:text-text-primary transition-colors">
+              <Settings size={15} />
+            </Link>
+            <button onClick={logout} className="text-text-muted hover:text-danger-text transition-colors">
+              <LogOut size={15} />
+            </button>
+          </>
+        ) : (
+          <div className="flex items-center gap-2.5 group">
+            <Avatar name="User" size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-text-primary truncate">My Account</p>
+              <p className="text-xs text-text-muted truncate">soflow.io</p>
+            </div>
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Link
+                href="/settings"
+                className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-subtle transition-colors"
+              >
+                <Settings size={13} />
+              </Link>
+              <button
+                onClick={logout}
+                className="p-1 rounded text-text-muted hover:text-danger-text hover:bg-danger-subtle transition-colors"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}

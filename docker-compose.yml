@@ -16,6 +16,12 @@ services:
       BACKEND_PROXY_URL: http://backend:4000
     ports:
       - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/next.config.ts:/app/next.config.ts
+      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
     depends_on:
       backend:
         condition: service_started

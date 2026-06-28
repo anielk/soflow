@@ -2,14 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    --color-bg-base:      #09090B;
+    --color-bg-surface:   #111113;
+    --color-bg-overlay:   #18181B;
+    --color-bg-subtle:    #1C1C1F;
+    --color-border:       #27272A;
+    --color-border-muted: #1F1F22;
+
+    --color-text-primary:   #FAFAFA;
+    --color-text-secondary: #A1A1AA;
+    --color-text-muted:     #71717A;
+
+    --color-accent:        #7C3AED;
+    --color-accent-hover:  #6D28D9;
+    --color-accent-subtle: rgba(124, 58, 237, 0.12);
+
+    --color-success:        #10B981;
+    --color-success-subtle: rgba(16, 185, 129, 0.12);
+    --color-warning:        #F59E0B;
+    --color-danger:         #EF4444;
+    --color-danger-subtle:  rgba(239, 68, 68, 0.12);
+
+    --sidebar-width:           240px;
+    --sidebar-collapsed-width: 64px;
+    --topbar-height:           56px;
+
+    --font-sans: var(--font-inter), system-ui, sans-serif;
+
+    --chart-1: #8B5CF6;
+    --chart-2: #EC4899;
+    --chart-3: #3B82F6;
+    --chart-4: #10B981;
+    --chart-5: #F59E0B;
+    --chart-6: #6366F1;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-bg-base), 0 0 0 4px var(--color-accent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-bg-muted);
+  }
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: #0b1020;
-  color: #e2e8f0;
-  font-family: Inter, system-ui, sans-serif;
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .letter-tight {
+    letter-spacing: -0.02em;
+  }
 }
