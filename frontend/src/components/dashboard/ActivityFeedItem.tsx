@@ -7,8 +7,8 @@ import type { ActivityItem, ActivityType } from '@/types/dashboard';
 interface ActivityConfig {
   label:  string;
   icon:   LucideIcon;
-  color:  string; // hex
-  bg:     string; // rgba
+  color:  string;
+  bg:     string;
 }
 
 const CONFIG: Record<ActivityType, ActivityConfig> = {
@@ -25,16 +25,16 @@ interface ActivityFeedItemProps {
 }
 
 export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
-  const cfg   = CONFIG[item.type];
-  const Icon  = cfg.icon;
-  const time  = relativeTime(item.timestamp);
+  const cfg  = CONFIG[item.type];
+  const Icon = cfg.icon;
+  const time = relativeTime(item.timestamp);
 
   return (
-    <div className="flex items-center gap-3 py-2.5 px-4 hover:bg-bg-subtle transition-colors duration-100 group">
+    <div className="flex items-center gap-3 py-3 px-4 hover:bg-bg-subtle/50 transition-colors duration-100 group">
       {/* Colored left accent */}
       <div
-        className="w-0.5 h-8 rounded-full shrink-0 self-center"
-        style={{ backgroundColor: cfg.color }}
+        className="w-[2px] h-7 rounded-full shrink-0 self-center"
+        style={{ backgroundColor: cfg.color, opacity: 0.7 }}
         aria-hidden="true"
       />
 
@@ -43,25 +43,29 @@ export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-text-primary truncate">
-          <span className="font-medium">{item.fanName}</span>
+        <p className="text-sm leading-snug truncate">
+          <span className="font-semibold text-text-primary">{item.fanName}</span>
           <span className="text-text-muted"> {cfg.label}</span>
         </p>
       </div>
 
-      {/* Right side: amount + time */}
+      {/* Right: amount + time */}
       <div className="flex items-center gap-3 shrink-0">
         {item.amount != null && (
           <span
-            className="text-xs font-semibold tabular-nums px-2 py-0.5 rounded-full"
-            style={{ color: cfg.color, backgroundColor: cfg.bg }}
+            className="text-[11px] font-semibold tabular-nums px-2 py-0.5 rounded-full border"
+            style={{
+              color:           cfg.color,
+              backgroundColor: cfg.bg,
+              borderColor:     `${cfg.color}28`,
+            }}
           >
             {formatCurrency(item.amount)}
           </span>
         )}
-        <div className="flex items-center gap-1.5">
-          <Icon size={12} style={{ color: cfg.color }} className="shrink-0 opacity-60" />
-          <span className="text-xs text-text-disabled tabular-nums whitespace-nowrap">{time}</span>
+        <div className="flex items-center gap-1 text-text-disabled">
+          <Icon size={11} style={{ color: cfg.color }} className="shrink-0 opacity-50" />
+          <span className="text-[11px] tabular-nums whitespace-nowrap">{time}</span>
         </div>
       </div>
     </div>

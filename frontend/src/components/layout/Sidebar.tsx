@@ -75,30 +75,33 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
     >
       {/* Logo + workspace */}
       <div className={[
-        'flex items-center border-b border-bg-border shrink-0',
-        collapsed ? 'h-14 justify-center px-0' : 'h-14 px-4 gap-2',
+        'flex items-center border-b border-bg-border/60 shrink-0',
+        collapsed ? 'h-14 justify-center px-0' : 'h-14 px-4 gap-3',
       ].join(' ')}>
-        <div className="w-7 h-7 rounded-md bg-violet-600 flex items-center justify-center shrink-0">
-          <Layers size={14} className="text-white" />
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)' }}
+        >
+          <Layers size={13} className="text-white" strokeWidth={2.5} />
         </div>
         {!collapsed && (
           <>
-            <span className="text-sm font-semibold text-text-primary tracking-tight">Soflow</span>
-            <button className="ml-auto text-text-muted hover:text-text-secondary transition-colors">
-              <ChevronDown size={14} />
+            <span className="text-[15px] font-bold text-text-primary tracking-tight">Soflow</span>
+            <button className="ml-auto p-0.5 rounded text-text-disabled hover:text-text-muted transition-colors">
+              <ChevronDown size={13} />
             </button>
           </>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-1">
+      <nav className="flex-1 overflow-y-auto px-2 py-2 flex flex-col">
         {navConfig.map(renderEntry)}
       </nav>
 
       {/* User footer */}
       <div className={[
-        'border-t border-bg-border shrink-0',
+        'border-t border-bg-border/60 shrink-0',
         collapsed ? 'p-2 flex flex-col items-center gap-2' : 'p-3',
       ].join(' ')}>
         {collapsed ? (
@@ -112,22 +115,22 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             </button>
           </>
         ) : (
-          <div className="flex items-center gap-2.5 group">
+          <div className="flex items-center gap-2.5 group cursor-default">
             <Avatar name="User" size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate">My Account</p>
+              <p className="text-sm font-semibold text-text-primary truncate leading-none mb-0.5">My Account</p>
               <p className="text-xs text-text-muted truncate">soflow.io</p>
             </div>
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               <Link
                 href="/settings"
-                className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-bg-subtle transition-colors"
+                className="p-1.5 rounded text-text-disabled hover:text-text-secondary hover:bg-bg-subtle transition-colors"
               >
                 <Settings size={13} />
               </Link>
               <button
                 onClick={logout}
-                className="p-1 rounded text-text-muted hover:text-danger-text hover:bg-danger-subtle transition-colors"
+                className="p-1.5 rounded text-text-disabled hover:text-danger-text hover:bg-danger-subtle transition-colors"
               >
                 <LogOut size={13} />
               </button>

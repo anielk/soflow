@@ -25,12 +25,9 @@ export default function DashboardPage() {
   }, [router]);
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       {/* Period selector row */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-sm font-semibold text-text-secondary tracking-wide uppercase">
-          Overview
-        </h1>
+      <div className="flex items-center justify-end gap-4">
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
@@ -41,7 +38,7 @@ export default function DashboardPage() {
       <QuickActionsRow />
 
       {/* Revenue chart (2/3) + Activity feed (1/3) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 min-h-0">
           <RevenueChart data={chartData} loading={loading} />
         </div>
@@ -51,7 +48,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Scheduled posts (1/2) + Creator progress (1/2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <ScheduledPostsCard posts={scheduledPosts} loading={loading} />
         <CreatorProgressCard goals={goals} loading={loading} />
       </div>

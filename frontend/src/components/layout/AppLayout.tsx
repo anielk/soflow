@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <Topbar onMenuToggle={toggle} collapsed={collapsed} />
 
         <main className="flex-1 overflow-y-auto mt-topbar">
-          <div className="p-6 max-w-[1440px] mx-auto animate-fade-in">
+          <div className="px-5 py-6 lg:px-8 max-w-[1440px] mx-auto animate-fade-in">
             {children}
           </div>
         </main>

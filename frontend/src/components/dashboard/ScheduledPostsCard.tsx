@@ -10,13 +10,13 @@ interface ScheduledPostsCardProps {
 
 export function ScheduledPostsCard({ posts, loading = false }: ScheduledPostsCardProps) {
   return (
-    <div className="bg-bg-surface border border-bg-border rounded-xl shadow-card h-full flex flex-col">
+    <div className="bg-bg-surface border border-bg-border/60 rounded-xl h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-bg-border shrink-0">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-bg-border/40 shrink-0">
         <h3 className="text-sm font-semibold text-text-primary">Scheduled posts</h3>
         <button
           type="button"
-          className="text-xs text-text-muted hover:text-violet-400 transition-colors duration-150"
+          className="text-[11px] font-medium text-text-disabled hover:text-violet-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-violet-600/10"
         >
           View queue
         </button>

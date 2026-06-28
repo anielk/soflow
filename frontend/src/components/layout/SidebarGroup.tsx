@@ -35,18 +35,18 @@ export function SidebarGroup({ id, label, children, defaultOpen = false, collaps
 
   if (collapsed) {
     // Icon-only mode: render children without the group header
-    return <div className="flex flex-col gap-0.5">{children}</div>;
+    return <div className="flex flex-col gap-0.5 mt-1">{children}</div>;
   }
 
   return (
-    <div>
+    <div className="mt-2">
       <button
         onClick={toggle}
-        className="w-full flex items-center justify-between px-2.5 h-7 rounded text-2xs font-medium uppercase tracking-wider text-text-disabled hover:text-text-muted transition-colors duration-150 select-none"
+        className="w-full flex items-center justify-between px-2.5 h-6 rounded text-[10px] font-semibold uppercase tracking-[0.06em] text-text-disabled hover:text-text-muted transition-colors duration-150 select-none"
       >
         <span>{label}</span>
         <ChevronRight
-          size={12}
+          size={11}
           className={['shrink-0 transition-transform duration-200', open ? 'rotate-90' : ''].join(' ')}
         />
       </button>
@@ -56,7 +56,7 @@ export function SidebarGroup({ id, label, children, defaultOpen = false, collaps
           open ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0',
         ].join(' ')}
       >
-        <div className="flex flex-col gap-0.5 pt-0.5">{children}</div>
+        <div className="flex flex-col gap-0.5 pt-1">{children}</div>
       </div>
     </div>
   );
