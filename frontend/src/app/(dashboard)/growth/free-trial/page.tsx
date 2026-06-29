@@ -43,7 +43,7 @@ export default function FreeTrialLinksPage() {
   }, [router]);
 
   function copyLink(code: string) {
-    navigator.clipboard.writeText(`https://onlyfans.com/action/trial/${code.toLowerCase()}`).catch(() => {});
+    navigator.clipboard.writeText(`https://leinaflow.link/trial/${code.toLowerCase()}`).catch(() => {});
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
   }

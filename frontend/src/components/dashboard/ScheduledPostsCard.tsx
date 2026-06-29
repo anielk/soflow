@@ -44,7 +44,7 @@ export function ScheduledPostsCard({ posts, loading = false }: ScheduledPostsCar
             icon={CalendarClock}
             title="Nothing scheduled"
             description="Queue your next post to keep fans engaged."
-            action={{ label: 'Schedule a post', href: '/of-manager/queue' }}
+            action={{ label: 'Schedule a post', href: '/creator-manager/queue' }}
             size="sm"
           />
         )}

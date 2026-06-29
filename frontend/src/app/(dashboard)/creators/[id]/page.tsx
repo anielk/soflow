@@ -65,7 +65,7 @@ function OverviewTab({ creator }: { creator: Creator }) {
           {[
             { label: 'Username',   value: `@${creator.username}` },
             { label: 'Subscription price', value: `€${creator.subscriptionPrice} / month` },
-            { label: 'Joined Soflow', value: new Date(creator.joinedAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) },
+            { label: 'Joined Leinaflow', value: new Date(creator.joinedAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) },
             { label: 'Assigned employees', value: creator.assignedEmployees.length > 0 ? `${creator.assignedEmployees.length} employees` : 'None' },
           ].map(({ label, value }) => (
             <div key={label} className="flex gap-4 px-4 py-2.5">
@@ -227,7 +227,7 @@ function SettingsTab({ creator }: { creator: Creator }) {
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-bg-border/40">
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Proxy configuration</h3>
-            <p className="text-xs text-text-muted mt-0.5">Route OnlyFans traffic through a dedicated IP.</p>
+            <p className="text-xs text-text-muted mt-0.5">Route platform traffic through a dedicated IP.</p>
           </div>
           <button
             type="button"

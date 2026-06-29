@@ -81,7 +81,7 @@ export default function SensitiveWordsPage() {
         <AlertCircle size={14} className="text-warning-text mt-0.5 shrink-0" />
         <p className="text-xs text-text-secondary leading-relaxed">
           Words on this list will be flagged before sending. Chatters will see a warning when a blocked word appears in a message draft.
-          This helps avoid OnlyFans terms-of-service violations.
+          This helps avoid platform terms-of-service violations.
         </p>
       </div>
 

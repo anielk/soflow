@@ -42,7 +42,7 @@ export default function LoginPage() {
         <div className="w-8 h-8 rounded-md bg-violet-600 flex items-center justify-center">
           <Layers size={16} className="text-white" />
         </div>
-        <span className="text-lg font-semibold tracking-tight text-text-primary">Soflow</span>
+        <span className="text-lg font-semibold tracking-tight text-text-primary">Leinaflow</span>
       </div>
 
       <div className="bg-bg-surface border border-bg-border rounded-xl p-7">

@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
 import { FilePlus, Eye, TrendingUp, CalendarClock, Users, Heart, MessageCircle, ImageIcon, Video } from 'lucide-react';
 import { formatCurrency, formatNumber, relativeTime, timeUntil } from '@/lib/format';
-import type { Post, MediaType } from '@/types/of-manager';
+import type { Post, MediaType } from '@/types/workspace';
 
 const TODAY_STATS = [
   { label: 'Views today',      value: 2847,   format: 'number',   color: '#8B5CF6', icon: Eye           },
@@ -70,14 +70,14 @@ export default function OFManagerHomePage() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">OF Manager</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Creator Manager</h1>
           <p className="mt-1 text-sm text-text-muted">Saturday, 28 June 2026</p>
         </div>
         <Button
           variant="primary"
           size="md"
           icon={FilePlus}
-          onClick={() => router.push('/of-manager/new-post')}
+          onClick={() => router.push('/creator-manager/new-post')}
         >
           New post
         </Button>
@@ -117,7 +117,7 @@ export default function OFManagerHomePage() {
             <button
               type="button"
               className="text-[11px] font-medium text-text-disabled hover:text-violet-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-violet-600/10"
-              onClick={() => router.push('/of-manager/queue')}
+              onClick={() => router.push('/creator-manager/queue')}
             >
               View all
             </button>
@@ -184,7 +184,7 @@ export default function OFManagerHomePage() {
             <button
               type="button"
               className="text-[11px] font-medium text-text-disabled hover:text-violet-400 transition-colors duration-150 px-2 py-0.5 rounded hover:bg-violet-600/10"
-              onClick={() => router.push('/of-manager/queue')}
+              onClick={() => router.push('/creator-manager/queue')}
             >
               View queue
             </button>

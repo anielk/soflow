@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
 import { Plus, Search, ImageIcon, Lock, FolderOpen } from 'lucide-react';
 import { relativeTime } from '@/lib/format';
-import type { Collection } from '@/types/of-manager';
+import type { Collection } from '@/types/workspace';
 
 const MOCK_COLLECTIONS: Collection[] = [
   {
@@ -51,7 +51,7 @@ export default function CollectionsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Collections</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Content Collections</h1>
           <p className="mt-1 text-sm text-text-muted">
             Bundle content into purchasable collections for fans.
           </p>

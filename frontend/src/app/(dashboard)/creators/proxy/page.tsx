@@ -22,7 +22,7 @@ export default function CustomProxyPage() {
       <div>
         <h1 className="text-xl font-semibold text-text-primary">Custom proxy</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Route each creator&apos;s OnlyFans traffic through a dedicated IP address.
+          Route each creator&apos;s platform traffic through a dedicated IP address.
         </p>
       </div>
 
@@ -30,7 +30,7 @@ export default function CustomProxyPage() {
       <div className="bg-violet-600/[0.07] border border-violet-600/20 rounded-xl px-4 py-3.5 flex items-start gap-3">
         <Info size={15} className="text-violet-400 mt-0.5 shrink-0" />
         <p className="text-sm text-text-secondary leading-relaxed">
-          Using a dedicated proxy per creator prevents OnlyFans from flagging logins from shared IPs.
+          Using a dedicated proxy per creator prevents platforms from flagging logins from shared IPs.
           Use residential or datacenter proxies from the same country as the creator.
           SOCKS5 and HTTP proxies are both supported.
         </p>

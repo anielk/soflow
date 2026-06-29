@@ -64,7 +64,7 @@ export default function MessagesPage() {
           <EmptyState
             icon={MessageSquare}
             title="No messages yet"
-            description="Messages from your fans will appear here once your creators are connected to OnlyFans."
+            description="Messages from your fans will appear here once your creators are connected to a platform."
             action={{ label: 'Connect a creator', href: '/creators' }}
             size="lg"
           />

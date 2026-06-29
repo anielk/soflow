@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Avatar, Badge, Button } from '@/components/ui';
 import { Heart, DollarSign, Users, MessageCircle, RefreshCw, ShoppingBag, BellOff } from 'lucide-react';
 import { formatCurrency, relativeTime } from '@/lib/format';
-import type { OFNotification, NotifType } from '@/types/of-manager';
+import type { Notification, NotifType } from '@/types/workspace';
 
 const NOTIF_ICONS: Record<NotifType, { icon: typeof Heart; color: string; label: string }> = {
   like:         { icon: Heart,         color: '#EC4899', label: 'liked your post' },
@@ -17,7 +17,7 @@ const NOTIF_ICONS: Record<NotifType, { icon: typeof Heart; color: string; label:
   ppv_unlock:   { icon: ShoppingBag,   color: '#F59E0B', label: 'unlocked a post' },
 };
 
-const MOCK_NOTIFICATIONS: OFNotification[] = [
+const MOCK_NOTIFICATIONS: Notification[] = [
   { id: '1',  type: 'tip',          fanName: 'Jake Davis',     content: '"Morning workout routine"', amount: 25,  timestamp: '2026-06-28T12:34:00Z', read: false },
   { id: '2',  type: 'subscription', fanName: 'Mike Rodriguez', content: 'Monthly — €9.99',           amount: 10,  timestamp: '2026-06-28T12:22:00Z', read: false },
   { id: '3',  type: 'like',         fanName: 'Chris Anderson', content: '"BTS beach photoshoot"',                 timestamp: '2026-06-28T11:45:00Z', read: false },

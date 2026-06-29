@@ -39,7 +39,7 @@ export default function PublicCreatorPage({ params }: { params: Promise<{ userna
             <div className="w-7 h-7 rounded-md bg-violet-600 flex items-center justify-center">
               <Layers size={14} className="text-white" />
             </div>
-            <span className="text-sm font-semibold tracking-tight text-text-primary">Soflow</span>
+            <span className="text-sm font-semibold tracking-tight text-text-primary">Leinaflow</span>
           </Link>
         </div>
       </header>

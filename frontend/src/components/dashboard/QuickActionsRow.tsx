@@ -29,7 +29,7 @@ const ACTIONS: QuickAction[] = [
     icon:        PenSquare,
     iconBg:      'rgba(139,92,246,0.14)',
     iconColor:   '#A78BFA',
-    href:        '/of-manager/new-post',
+    href:        '/creator-manager/new-post',
   },
   {
     id:          'send-message',
@@ -56,7 +56,7 @@ const ACTIONS: QuickAction[] = [
     icon:        CalendarPlus,
     iconBg:      'rgba(245,158,11,0.14)',
     iconColor:   '#FCD34D',
-    href:        '/of-manager/queue',
+    href:        '/creator-manager/queue',
   },
   {
     id:          'ai-copilot',

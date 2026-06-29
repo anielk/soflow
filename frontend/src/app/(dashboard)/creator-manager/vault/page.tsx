@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
 import { Upload, Search, ImageIcon, Video, Archive } from 'lucide-react';
 import { relativeTime } from '@/lib/format';
-import type { VaultItem, MediaType } from '@/types/of-manager';
+import type { VaultItem, MediaType } from '@/types/workspace';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -53,7 +53,7 @@ export default function VaultPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Vault</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Media Library</h1>
           <p className="mt-1 text-sm text-text-muted">
             {MOCK_VAULT.length} files · {formatBytes(totalSize)} used
           </p>

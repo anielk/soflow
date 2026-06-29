@@ -40,7 +40,7 @@ export default function NewPostPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     // TODO: POST /v1/posts { type: postType, price, caption, scheduledAt, mediaIds }
-    router.push('/of-manager/queue');
+    router.push('/creator-manager/queue');
   }
 
   const isValid = caption.trim().length > 0 || mediaFiles.length > 0;

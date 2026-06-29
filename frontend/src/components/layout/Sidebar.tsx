@@ -86,7 +86,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         </div>
         {!collapsed && (
           <>
-            <span className="text-[15px] font-bold text-text-primary tracking-tight">Soflow</span>
+            <span className="text-[15px] font-bold text-text-primary tracking-tight">Leinaflow</span>
             <button className="ml-auto p-0.5 rounded text-text-disabled hover:text-text-muted transition-colors">
               <ChevronDown size={13} />
             </button>
@@ -119,7 +119,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
             <Avatar name="User" size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-text-primary truncate leading-none mb-0.5">My Account</p>
-              <p className="text-xs text-text-muted truncate">soflow.io</p>
+              <p className="text-xs text-text-muted truncate">leinaflow.com</p>
             </div>
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
               <Link

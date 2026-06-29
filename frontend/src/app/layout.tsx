@@ -11,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Soflow',
-  description: 'Premium creator platform for agencies',
+  title: 'Leinaflow',
+  description: 'Creator management platform for agencies',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
 import { FilePlus, Search, ChevronUp, ChevronDown, CalendarClock, ImageIcon, Video } from 'lucide-react';
 import { timeUntil } from '@/lib/format';
-import type { Post, PostType, MediaType } from '@/types/of-manager';
+import type { Post, PostType, MediaType } from '@/types/workspace';
 
 const MOCK_QUEUE: Post[] = [
   {
@@ -88,14 +88,14 @@ export default function QueuePage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Queue</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Publishing Queue</h1>
           <p className="mt-1 text-sm text-text-muted">{MOCK_QUEUE.length} posts scheduled</p>
         </div>
         <Button
           variant="primary"
           size="md"
           icon={FilePlus}
-          onClick={() => router.push('/of-manager/new-post')}
+          onClick={() => router.push('/creator-manager/new-post')}
         >
           Add to queue
         </Button>

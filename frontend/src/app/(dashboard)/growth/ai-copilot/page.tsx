@@ -74,7 +74,7 @@ export default function AICopilotPage() {
             <Zap size={20} className="text-violet-400" />
           </div>
           <div>
-            <p className="font-semibold text-text-primary">Soflow Copilot is in early access</p>
+            <p className="font-semibold text-text-primary">Leinaflow Copilot is in early access</p>
             <p className="text-xs text-text-muted">Available for Pro agencies · Powered by Claude</p>
           </div>
         </div>

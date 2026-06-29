@@ -111,7 +111,7 @@ export default function AutoFollowPage() {
               max="200"
               value={dailyLimit}
               onChange={(e) => setDailyLimit(e.target.value)}
-              hint="OnlyFans recommends staying under 100 follows per day to avoid restrictions."
+              hint="Platform guidelines recommend staying under 100 follows per day to avoid restrictions."
             />
             <Input
               label="Target niches"
@@ -133,7 +133,7 @@ export default function AutoFollowPage() {
           <div className="bg-warning/5 border border-warning/20 rounded-xl px-4 py-3.5 flex items-start gap-3">
             <AlertCircle size={14} className="text-warning-text mt-0.5 shrink-0" />
             <p className="text-xs text-text-secondary leading-relaxed">
-              Keep daily limits below 100 to stay within OnlyFans guidelines.
+              Keep daily limits below 100 to stay within platform guidelines.
               Excessive automated following may trigger account restrictions.
             </p>
           </div>

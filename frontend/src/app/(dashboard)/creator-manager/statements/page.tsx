@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
 import { Download, TrendingUp, Clock } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
-import type { Statement, StatementStatus } from '@/types/of-manager';
+import type { Statement, StatementStatus } from '@/types/workspace';
 
 const MOCK_STATEMENTS: Statement[] = [
   { id: '6', period: 'June 2026',     periodStart: '2026-06-01', gross: 18420, platformFee: 3684, net: 14736, status: 'processing' },
@@ -40,7 +40,7 @@ export default function StatementsPage() {
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Statements</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Monthly revenue statements — OnlyFans 80% payout.
+            Monthly revenue statements — 80% net creator payout.
           </p>
         </div>
         <Button variant="secondary" size="md" icon={Download}>
@@ -171,7 +171,7 @@ export default function StatementsPage() {
         {/* Info footer */}
         <div className="px-4 py-3 border-t border-bg-border/40 bg-bg-subtle/20">
           <p className="text-xs text-text-disabled">
-            Statements reflect OnlyFans payouts: 80% of gross revenue paid to creators, 20% platform fee retained.
+            Statements reflect platform payouts: 80% of gross revenue paid to creators, 20% platform fee retained.
             Processing statements are released within 7 business days.
           </p>
         </div>

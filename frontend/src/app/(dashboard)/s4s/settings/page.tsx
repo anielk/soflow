@@ -143,7 +143,7 @@ export default function S4SSettingsPage() {
           <div className="divide-y divide-bg-border/40">
             {[
               { label: 'Email notifications', desc: 'Receive an email when a request arrives or status changes', value: notifyEmail, onChange: setNotifyEmail },
-              { label: 'In-app notifications', desc: 'Show notification badge in the Soflow dashboard', value: notifyInApp, onChange: setNotifyInApp },
+              { label: 'In-app notifications', desc: 'Show notification badge in the Leinaflow dashboard', value: notifyInApp, onChange: setNotifyInApp },
             ].map(({ label, desc, value, onChange }) => (
               <div key={label} className="flex items-center justify-between px-5 py-3.5">
                 <div>

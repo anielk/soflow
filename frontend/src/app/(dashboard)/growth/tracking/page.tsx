@@ -22,12 +22,12 @@ interface TrackingLink {
 }
 
 const MOCK_LINKS: TrackingLink[] = [
-  { id: 'tk1', name: 'Twitter paid campaign',  shortUrl: 'soflow.link/tw-paid',   source: 'twitter',   medium: 'paid_social', campaign: 'june_promo', clicks: 2340, conversions: 87, revenue: 1740, status: 'active',   createdAt: '2026-06-01T00:00:00Z' },
-  { id: 'tk2', name: 'Reddit organic',          shortUrl: 'soflow.link/reddit-org', source: 'reddit',    medium: 'organic',     campaign: 'evergreen',  clicks: 1890, conversions: 64, revenue: 1280, status: 'active',   createdAt: '2026-05-15T00:00:00Z' },
-  { id: 'tk3', name: 'Email newsletter',        shortUrl: 'soflow.link/email-nl',   source: 'email',     medium: 'newsletter',  campaign: 'weekly',     clicks: 780,  conversions: 43, revenue: 860,  status: 'active',   createdAt: '2026-06-10T00:00:00Z' },
-  { id: 'tk4', name: 'Instagram story swipe-up', shortUrl: 'soflow.link/ig-story', source: 'instagram', medium: 'stories',     campaign: 'june_promo', clicks: 560,  conversions: 28, revenue: 560,  status: 'active',   createdAt: '2026-06-12T00:00:00Z' },
-  { id: 'tk5', name: 'TikTok bio link',          shortUrl: 'soflow.link/tiktok-bio', source: 'tiktok',   medium: 'organic',     campaign: 'bio',        clicks: 234,  conversions: 12, revenue: 240,  status: 'paused',   createdAt: '2026-06-20T00:00:00Z' },
-  { id: 'tk6', name: 'YouTube description',      shortUrl: 'soflow.link/yt-desc',   source: 'youtube',  medium: 'video',       campaign: 'evergreen',  clicks: 89,   conversions: 5,  revenue: 100,  status: 'archived', createdAt: '2026-03-01T00:00:00Z' },
+  { id: 'tk1', name: 'Twitter paid campaign',  shortUrl: 'leinaflow.link/tw-paid',   source: 'twitter',   medium: 'paid_social', campaign: 'june_promo', clicks: 2340, conversions: 87, revenue: 1740, status: 'active',   createdAt: '2026-06-01T00:00:00Z' },
+  { id: 'tk2', name: 'Reddit organic',          shortUrl: 'leinaflow.link/reddit-org', source: 'reddit',    medium: 'organic',     campaign: 'evergreen',  clicks: 1890, conversions: 64, revenue: 1280, status: 'active',   createdAt: '2026-05-15T00:00:00Z' },
+  { id: 'tk3', name: 'Email newsletter',        shortUrl: 'leinaflow.link/email-nl',   source: 'email',     medium: 'newsletter',  campaign: 'weekly',     clicks: 780,  conversions: 43, revenue: 860,  status: 'active',   createdAt: '2026-06-10T00:00:00Z' },
+  { id: 'tk4', name: 'Instagram story swipe-up', shortUrl: 'leinaflow.link/ig-story', source: 'instagram', medium: 'stories',     campaign: 'june_promo', clicks: 560,  conversions: 28, revenue: 560,  status: 'active',   createdAt: '2026-06-12T00:00:00Z' },
+  { id: 'tk5', name: 'TikTok bio link',          shortUrl: 'leinaflow.link/tiktok-bio', source: 'tiktok',   medium: 'organic',     campaign: 'bio',        clicks: 234,  conversions: 12, revenue: 240,  status: 'paused',   createdAt: '2026-06-20T00:00:00Z' },
+  { id: 'tk6', name: 'YouTube description',      shortUrl: 'leinaflow.link/yt-desc',   source: 'youtube',  medium: 'video',       campaign: 'evergreen',  clicks: 89,   conversions: 5,  revenue: 100,  status: 'archived', createdAt: '2026-03-01T00:00:00Z' },
 ];
 
 const STATUS_CONFIG: Record<TrackingLink['status'], { variant: 'success' | 'warning' | 'default'; label: string }> = {

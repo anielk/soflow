@@ -79,7 +79,7 @@ export default function AnalyticsPage() {
         <EmptyState
           icon={BarChart3}
           title="Connect a creator to unlock analytics"
-          description="Analytics become available once your first OnlyFans creator is connected. Reports update daily."
+          description="Analytics become available once your first creator account is connected. Reports update daily."
           action={{ label: 'Manage creators', href: '/creators' }}
           size="lg"
         />

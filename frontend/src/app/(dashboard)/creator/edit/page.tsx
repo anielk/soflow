@@ -81,7 +81,7 @@ export default function CreatorEditPage() {
       <div>
         <h1 className="text-xl font-semibold text-text-primary">Edit creator profile</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Update the public profile shown to fans on OnlyFans.
+          Update the public profile shown on connected platforms.
         </p>
       </div>
 
