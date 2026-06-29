@@ -18,8 +18,9 @@ async function main() {
     const admin = await prisma.user.create({
       data: {
         email: adminEmail,
+        username: 'admin',
         passwordHash: hashedPassword,
-        name: 'Soflow Admin',
+        name: 'Admin',
         isCreator: false,
       },
     });
@@ -37,6 +38,7 @@ async function main() {
     const reg = await prisma.user.create({
       data: {
         email: regularUserEmail,
+        username: 'admin_user',
         passwordHash: hashedReg,
         name: 'Admin',
         isCreator: false,
