@@ -8,19 +8,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Roles ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  MANAGER
+  USER
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
+  id            String            @id @default(cuid())
+  email         String            @unique
+  username      String            @unique
   passwordHash  String
   name          String?
   bio           String?
   avatarUrl     String?
   bannerUrl     String?
-  isCreator     Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  isCreator     Boolean           @default(false)
+  role          Role              @default(USER)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   creatorProfile CreatorProfile?
+  workspaceMembers WorkspaceMember[]
 }
 
 model CreatorProfile {
@@ -42,4 +55,90 @@ model HealthSnapshot {
   id        String   @id @default(cuid())
   status    String
   createdAt DateTime @default(now())
+}
+
+// ─── Multi-tenancy foundation ─────────────────────────────────────────────────
+// Workspaces are the top-level unit of tenancy.
+// Nothing currently enforces a single workspace — the architecture is open.
+
+model Workspace {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  plan          String            @default("free")
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  members       WorkspaceMember[]
+  aiConnections AIConnection[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role      @default(USER)
+  joinedAt    DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, userId])
+}
+
+// ─── AI provider architecture ──────────────────────────────────────────────────
+// Providers and models are stored in the database, not hardcoded.
+// Each workspace connects to providers via AIConnection.
+// This allows dynamic provider registration without code changes.
+
+model AIProvider {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique   // e.g. "openai", "anthropic", "ollama"
+  baseUrl     String?                 // required for self-hosted (Ollama, Azure)
+  authType    String                  // "api_key" | "none" | "bearer" | "azure"
+  isEnabled   Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  models      AIModel[]
+  connections AIConnection[]
+}
+
+model AIModel {
+  id               String     @id @default(cuid())
+  providerId       String
+  name             String                      // display name: "GPT-4o"
+  modelId          String                      // API value: "gpt-4o"
+  contextWindow    Int?                        // max tokens
+  inputCostPer1k   Float?                      // USD per 1k input tokens
+  outputCostPer1k  Float?                      // USD per 1k output tokens
+  capabilities     String[]                    // ["chat","vision","code","embedding"]
+  isEnabled        Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  provider         AIProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  @@unique([providerId, modelId])
+}
+
+model AIConnection {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  providerId   String
+  encryptedKey String?                         // AES-encrypted API key
+  baseUrl      String?                         // workspace-level override
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider     AIProvider @relation(fields: [providerId], references: [id])
+  @@unique([workspaceId, providerId])
+}
+
+model AISettings {
+  id                String   @id @default(cuid())
+  workspaceId       String?  @unique   // null = platform-global default
+  defaultProviderId String?
+  defaultModelId    String?
+  temperature       Float    @default(0.7)
+  maxTokens         Int      @default(2048)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }

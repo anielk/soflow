@@ -4,6 +4,28 @@ import * as bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // ── SUPER_ADMIN platform user ─────────────────────────────────────────────
+  const superAdminEmail = 'superadmin@leinaflow.com';
+  const superAdminPassword = 'SuperAdmin2026!';
+  const existingSuperAdmin = await prisma.user.findUnique({ where: { email: superAdminEmail } });
+  if (!existingSuperAdmin) {
+    const hashedSuper = await bcrypt.hash(superAdminPassword, 10);
+    const superAdmin = await prisma.user.create({
+      data: {
+        email: superAdminEmail,
+        username: 'superadmin',
+        passwordHash: hashedSuper,
+        name: 'Platform Admin',
+        isCreator: false,
+        role: 'SUPER_ADMIN',
+      },
+    });
+    console.log('SUPER_ADMIN created:', superAdmin.email);
+  } else {
+    console.log('SUPER_ADMIN already exists:', superAdminEmail);
+  }
+
+  // ── Existing workspace admin user ─────────────────────────────────────────
   const adminEmail = 'admin@soflow.local';
   const adminPassword = 'ChangeMeNow123!';
   const hashedPassword = await bcrypt.hash(adminPassword, 10);
