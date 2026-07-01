@@ -95,6 +95,10 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <p className="text-center text-xs text-text-disabled mt-6">
+        Leinaflow &middot; A product of <span className="text-text-muted">Cloudivo</span>
+      </p>
     </div>
   );
 }

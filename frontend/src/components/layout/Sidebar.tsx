@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Settings, LogOut, ChevronDown, Layers } from 'lucide-react';
-import { Avatar } from '@/components/ui';
+import { ChevronDown, Layers } from 'lucide-react';
 import { SidebarItem } from './SidebarItem';
 import { SidebarGroup } from './SidebarGroup';
 import { navConfig, type NavEntry } from '@/lib/nav-config';
-import { logout } from '@/lib/auth';
+import { UserMenu } from '@/components/ui/UserMenu';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -102,40 +100,16 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
       {/* User footer */}
       <div className={[
         'border-t border-bg-border/60 shrink-0',
-        collapsed ? 'p-2 flex flex-col items-center gap-2' : 'p-3',
+        collapsed ? 'p-2 flex flex-col items-center' : 'p-3 space-y-2',
       ].join(' ')}>
-        {collapsed ? (
-          <>
-            <Avatar name="User" size="sm" />
-            <Link href="/settings" className="text-text-muted hover:text-text-primary transition-colors">
-              <Settings size={15} />
-            </Link>
-            <button onClick={logout} className="text-text-muted hover:text-danger-text transition-colors">
-              <LogOut size={15} />
-            </button>
-          </>
-        ) : (
-          <div className="flex items-center gap-2.5 group cursor-default">
-            <Avatar name="User" size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text-primary truncate leading-none mb-0.5">My Account</p>
-              <p className="text-xs text-text-muted truncate">leinaflow.com</p>
-            </div>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-              <Link
-                href="/settings"
-                className="p-1.5 rounded text-text-disabled hover:text-text-secondary hover:bg-bg-subtle transition-colors"
-              >
-                <Settings size={13} />
-              </Link>
-              <button
-                onClick={logout}
-                className="p-1.5 rounded text-text-disabled hover:text-danger-text hover:bg-danger-subtle transition-colors"
-              >
-                <LogOut size={13} />
-              </button>
-            </div>
-          </div>
+        <UserMenu
+          variant={collapsed ? 'compact' : 'expanded'}
+          placement="bottom-left"
+        />
+        {!collapsed && (
+          <p className="text-[10px] text-text-disabled text-center leading-relaxed">
+            Leinaflow &middot; A product of <span className="text-text-muted">Cloudivo</span>
+          </p>
         )}
       </div>
     </aside>

@@ -42,7 +42,7 @@ export function SidebarGroup({ id, label, children, defaultOpen = false, collaps
     <div className="mt-2">
       <button
         onClick={toggle}
-        className="w-full flex items-center justify-between px-2.5 h-6 rounded text-[10px] font-semibold uppercase tracking-[0.06em] text-text-disabled hover:text-text-muted transition-colors duration-150 select-none"
+        className="w-full flex items-center justify-between px-2.5 h-6 rounded text-[10px] font-semibold uppercase tracking-[0.06em] text-text-disabled hover:text-text-muted transition-colors duration-150 select-none cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60"
       >
         <span>{label}</span>
         <ChevronRight

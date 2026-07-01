@@ -2,7 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import { Menu, Bell, Search } from 'lucide-react';
-import { Avatar, Badge } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { UserMenu } from '@/components/ui/UserMenu';
 import { navConfig } from '@/lib/nav-config';
 
 interface TopbarProps {
@@ -36,8 +37,9 @@ export function Topbar({ onMenuToggle, collapsed }: TopbarProps) {
     >
       {/* Hamburger */}
       <button
+        type="button"
         onClick={onMenuToggle}
-        className="text-text-muted hover:text-text-primary transition-colors p-1 rounded hover:bg-bg-subtle"
+        className="text-text-muted hover:text-text-primary transition-colors p-1 rounded hover:bg-bg-subtle focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 cursor-pointer"
         aria-label="Toggle sidebar"
       >
         <Menu size={16} />
@@ -50,7 +52,7 @@ export function Topbar({ onMenuToggle, collapsed }: TopbarProps) {
       <div className="flex-1" />
 
       {/* Search stub */}
-      <button className="hidden sm:flex items-center gap-2 h-7 px-3 rounded bg-bg-subtle border border-bg-border text-text-muted text-xs hover:border-bg-muted transition-colors">
+      <button type="button" className="hidden sm:flex items-center gap-2 h-7 px-3 rounded bg-bg-subtle border border-bg-border text-text-muted text-xs hover:border-bg-muted transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 cursor-pointer">
         <Search size={12} />
         <span>Search...</span>
         <span className="ml-2 text-2xs bg-bg-overlay border border-bg-border rounded px-1 py-0.5 font-mono">⌘K</span>
@@ -58,7 +60,7 @@ export function Topbar({ onMenuToggle, collapsed }: TopbarProps) {
 
       {/* Notifications */}
       <div className="relative">
-        <button className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-subtle transition-colors">
+        <button type="button" className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-subtle transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60 cursor-pointer" aria-label="Notifications">
           <Bell size={16} />
         </button>
         <Badge variant="violet" size="sm" className="absolute -top-0.5 -right-0.5 pointer-events-none">
@@ -66,8 +68,8 @@ export function Topbar({ onMenuToggle, collapsed }: TopbarProps) {
         </Badge>
       </div>
 
-      {/* User avatar */}
-      <Avatar name="User" size="sm" />
+      {/* User avatar + menu */}
+      <UserMenu variant="compact" placement="top-right" />
     </header>
   );
 }

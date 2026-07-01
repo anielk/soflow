@@ -73,6 +73,9 @@ export function AdminSidebar() {
           <LogOut size={12} />
           Sign out
         </button>
+        <p className="text-[10px] text-text-disabled text-center pt-1 leading-relaxed">
+          Leinaflow &middot; A product of <span className="text-text-muted">Cloudivo</span>
+        </p>
       </div>
     </aside>
   );

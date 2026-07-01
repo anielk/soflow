@@ -40,7 +40,7 @@ export default function VaultProPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-xl font-semibold text-text-primary">Vault Pro</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Media Library</h1>
           <Badge variant="violet" size="sm">Pro</Badge>
         </div>
       </div>

@@ -65,7 +65,7 @@ export const navConfig: NavEntry[] = [
   {
     kind:        'group',
     id:          'creator-manager',
-    label:       'Creator Manager',
+    label:       'Content Manager',
     collapsible: true,
     defaultOpen: false,
     items: [
@@ -94,14 +94,6 @@ export const navConfig: NavEntry[] = [
     ],
   },
   {
-    kind:  'item',
-    id:    'inbox-pro',
-    label: 'Inbox Pro',
-    href:  '/messages-pro',
-    icon:  MessageSquare,
-    badge: 0,
-  },
-  {
     kind:        'group',
     id:          'growth',
     label:       'Growth',
@@ -111,7 +103,7 @@ export const navConfig: NavEntry[] = [
       { id: 'growth-smart-messages', label: 'Smart Messages',      href: '/growth/smart-messages',  icon: Zap        },
       { id: 'growth-smart-lists',    label: 'Smart Lists',         href: '/growth/smart-lists',     icon: List       },
       { id: 'growth-auto-follow',    label: 'Auto-follow',         href: '/growth/auto-follow',     icon: UserPlus   },
-      { id: 'growth-vault-pro',      label: 'Media Library Pro',   href: '/growth/vault-pro',       icon: Archive    },
+      { id: 'growth-vault-pro',      label: 'Media Library',       href: '/growth/vault-pro',       icon: Archive    },
       { id: 'growth-templates',      label: 'Message Templates',   href: '/growth/scripts',         icon: ScrollText },
       { id: 'growth-promotion',      label: 'Profile promotion',   href: '/growth/promotion',       icon: Megaphone  },
       { id: 'growth-free-trial',     label: 'Free trial links',    href: '/growth/free-trial',      icon: Link2      },

@@ -70,7 +70,7 @@ export default function OFManagerHomePage() {
       {/* Page header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Creator Manager</h1>
+          <h1 className="text-xl font-semibold text-text-primary">Content Manager</h1>
           <p className="mt-1 text-sm text-text-muted">Saturday, 28 June 2026</p>
         </div>
         <Button

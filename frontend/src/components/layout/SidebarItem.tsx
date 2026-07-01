@@ -19,7 +19,7 @@ export function SidebarItem({ icon: Icon, label, href, badge, active, indent, co
     <Link
       href={href}
       className={[
-        'relative flex items-center rounded transition-all duration-150 select-none group',
+        'relative flex items-center rounded transition-all duration-150 select-none group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500/60',
         collapsed ? 'justify-center h-9 w-9 mx-auto' : 'gap-2.5 px-2.5 h-8',
         indent && !collapsed ? 'pl-8' : '',
         active

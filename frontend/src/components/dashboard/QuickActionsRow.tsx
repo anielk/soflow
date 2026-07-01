@@ -38,7 +38,7 @@ const ACTIONS: QuickAction[] = [
     icon:        MessageSquare,
     iconBg:      'rgba(236,72,153,0.14)',
     iconColor:   '#F472B6',
-    href:        '/messages-pro',
+    href:        '/messages',
   },
   {
     id:          'view-fans',
