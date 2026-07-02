@@ -33,10 +33,16 @@ const config: Config = {
           900: '#4C1D95',
           950: '#2E1065',
         },
+        // Brand tokens — sourced directly from the Leinaflow branding board.
+        brand: {
+          primary:   '#7C3AED',
+          secondary: '#A855F7',
+          accent:    '#06B6D4',
+        },
         success: {
-          DEFAULT: '#10B981',
-          subtle:  'rgba(16, 185, 129, 0.12)',
-          text:    '#34D399',
+          DEFAULT: '#22C55E',
+          subtle:  'rgba(34, 197, 94, 0.12)',
+          text:    '#4ADE80',
         },
         warning: {
           DEFAULT: '#F59E0B',
@@ -58,7 +64,12 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-satoshi)', 'var(--font-inter)', 'system-ui', 'sans-serif'],
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)',
+        'gradient-accent':  'linear-gradient(135deg, #06B6D4 0%, #3B82F6 100%)',
+        'gradient-brand':   'linear-gradient(135deg, #7C3AED 0%, #EC4899 100%)',
       },
       fontSize: {
         '2xs':       ['0.625rem',  { lineHeight: '0.875rem' }],
@@ -94,6 +105,11 @@ const config: Config = {
         'dropdown':     '0 4px 16px 0 rgb(0 0 0 / 0.6)',
         'modal':        '0 8px 32px 0 rgb(0 0 0 / 0.7)',
         'violet-glow':  '0 0 0 3px rgba(124, 58, 237, 0.25)',
+        // Soft, diffuse shadows for premium surfaces — no hard edges, no insets.
+        'soft-sm':      '0 2px 8px -2px rgba(0, 0, 0, 0.25)',
+        'soft':         '0 8px 24px -6px rgba(0, 0, 0, 0.35)',
+        'soft-lg':      '0 16px 40px -8px rgba(0, 0, 0, 0.45)',
+        'glow-primary': '0 0 24px -4px rgba(124, 58, 237, 0.35)',
       },
       keyframes: {
         'fade-in': {

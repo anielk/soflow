@@ -34,6 +34,7 @@ model User {
   updatedAt     DateTime          @updatedAt
   creatorProfile CreatorProfile?
   workspaceMembers WorkspaceMember[]
+  media         Media[]
 }
 
 model CreatorProfile {
@@ -71,6 +72,7 @@ model Workspace {
   updatedAt     DateTime          @updatedAt
   members       WorkspaceMember[]
   aiConnections AIConnection[]
+  media         Media[]
 }
 
 model WorkspaceMember {
@@ -141,4 +143,45 @@ model AISettings {
   maxTokens         Int      @default(2048)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+}
+
+// ─── Media Library ──────────────────────────────────────────────────────────
+// Media metadata lives in Postgres; the actual bytes live on a pluggable
+// storage backend (see StorageService). storageProvider identifies which
+// backend a given file lives on, so providers can be swapped/mixed without
+// a data migration.
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum MediaStatus {
+  PROCESSING
+  READY
+  FAILED
+}
+
+model Media {
+  id               String      @id @default(cuid())
+  workspaceId      String
+  ownerId          String
+  filename         String                          // generated safe on-disk name
+  originalFilename String                          // user-supplied name, display only, never trusted
+  mimeType         String
+  extension        String
+  sizeBytes        BigInt                          // BigInt: default 2GB max overflows Int32
+  width            Int?
+  height           Int?
+  duration         Float?
+  type             MediaType
+  status           MediaStatus @default(PROCESSING)
+  storageProvider  String                          // "local" today; matches StorageService driver id
+  storagePath      String                          // key within that provider
+  thumbnailPath    String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  workspace        Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  owner            User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  @@index([workspaceId])
 }

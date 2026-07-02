@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, Layers } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
+import { LogoIcon } from '@/components/brand/Logo';
 import { loginUser } from '@/lib/api';
 import { setAuthToken } from '@/lib/auth';
 
@@ -39,9 +40,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       {/* Logo */}
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <div className="w-8 h-8 rounded-md bg-violet-600 flex items-center justify-center">
-          <Layers size={16} className="text-white" />
-        </div>
+        <LogoIcon size={32} />
         <span className="text-lg font-semibold tracking-tight text-text-primary">Leinaflow</span>
       </div>
 

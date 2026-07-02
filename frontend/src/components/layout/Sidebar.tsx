@@ -1,11 +1,12 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { ChevronDown, Layers } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { SidebarItem } from './SidebarItem';
 import { SidebarGroup } from './SidebarGroup';
 import { navConfig, type NavEntry } from '@/lib/nav-config';
 import { UserMenu } from '@/components/ui/UserMenu';
+import { LogoIcon } from '@/components/brand/Logo';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -76,12 +77,7 @@ export function Sidebar({ collapsed = false }: SidebarProps) {
         'flex items-center border-b border-bg-border/60 shrink-0',
         collapsed ? 'h-14 justify-center px-0' : 'h-14 px-4 gap-3',
       ].join(' ')}>
-        <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)' }}
-        >
-          <Layers size={13} className="text-white" strokeWidth={2.5} />
-        </div>
+        <LogoIcon size={28} />
         {!collapsed && (
           <>
             <span className="text-[15px] font-bold text-text-primary tracking-tight">Leinaflow</span>

@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, Layers } from 'lucide-react';
+import { Mail, Lock, User } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { registerUser } from '@/lib/api';
+import { LogoIcon } from '@/components/brand/Logo';
 
 export default function RegisterPage() {
   const [email, setEmail]       = useState('');
@@ -34,9 +35,7 @@ export default function RegisterPage() {
     <div className="w-full max-w-sm">
       {/* Logo */}
       <div className="flex items-center gap-2 mb-8 justify-center">
-        <div className="w-8 h-8 rounded-md bg-violet-600 flex items-center justify-center">
-          <Layers size={16} className="text-white" />
-        </div>
+        <LogoIcon size={32} />
         <span className="text-lg font-semibold tracking-tight text-text-primary">Leinaflow</span>
       </div>
 

@@ -10,8 +10,6 @@ services:
     command: ["npm", "run", "start"]
     expose:
       - "3000"
-    security_opt:
-      - no-new-privileges:true
     read_only: true
     tmpfs:
       - /tmp
@@ -26,11 +24,14 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      MEDIA_STORAGE_DRIVER: ${MEDIA_STORAGE_DRIVER}
+      MEDIA_STORAGE_PATH: ${MEDIA_STORAGE_PATH}
+      MEDIA_MAX_FILE_SIZE_MB: ${MEDIA_MAX_FILE_SIZE_MB}
+    volumes:
+      - media_storage:${MEDIA_STORAGE_PATH}
     command: ["npm", "run", "start:prod"]
     expose:
       - "4000"
-    security_opt:
-      - no-new-privileges:true
     read_only: true
     tmpfs:
       - /tmp

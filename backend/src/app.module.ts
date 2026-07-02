@@ -10,6 +10,7 @@ import { WebsocketModule } from './websocket/websocket.module';
 import { ConfigModule as AppConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CreatorsModule } from './creators/creators.module';
+import { MediaModule } from './media/media.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -28,6 +29,7 @@ import { AppController } from './app.controller';
     AppConfigModule,
     DashboardModule,
     CreatorsModule,
+    MediaModule,
   ],
   controllers: [AppController],
 })

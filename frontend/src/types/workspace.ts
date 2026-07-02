@@ -21,12 +21,26 @@ export interface Post {
   mediaType:    MediaType;
 }
 
+export type MediaFileStatus = 'processing' | 'ready' | 'failed';
+
 export interface MediaItem {
-  id:         string;
-  type:       MediaType;
-  filename:   string;
-  sizeBytes:  number;
-  uploadedAt: string;
+  id:               string;
+  workspaceId:      string;
+  ownerId:          string;
+  ownerName:        string;
+  filename:         string;
+  originalFilename: string;
+  mimeType:         string;
+  extension:        string;
+  sizeBytes:        number;
+  width:            number | null;
+  height:           number | null;
+  duration:         number | null;
+  type:             MediaType;
+  status:           MediaFileStatus;
+  hasThumbnail:     boolean;
+  createdAt:        string;
+  updatedAt:        string;
 }
 
 /** @deprecated alias kept so old VaultItem references still resolve */

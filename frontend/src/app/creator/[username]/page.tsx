@@ -5,7 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { apiGet } from '@/lib/api';
 import { Avatar } from '@/components/ui';
-import { Layers, Globe, ExternalLink } from 'lucide-react';
+import { Globe, ExternalLink } from 'lucide-react';
+import { LogoIcon } from '@/components/brand/Logo';
 
 interface Creator {
   name?:    string;
@@ -36,9 +37,7 @@ export default function PublicCreatorPage({ params }: { params: Promise<{ userna
       <header className="border-b border-bg-border bg-bg-surface">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-2">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-md bg-violet-600 flex items-center justify-center">
-              <Layers size={14} className="text-white" />
-            </div>
+            <LogoIcon size={28} />
             <span className="text-sm font-semibold tracking-tight text-text-primary">Leinaflow</span>
           </Link>
         </div>

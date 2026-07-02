@@ -8,4 +8,7 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   DATABASE_URL: Joi.string().required(),
   REDIS_URL: Joi.string().required(),
+  MEDIA_STORAGE_DRIVER: Joi.string().valid('local').default('local'),
+  MEDIA_STORAGE_PATH: Joi.string().default('/data/media'),
+  MEDIA_MAX_FILE_SIZE_MB: Joi.number().default(2048),
 });

@@ -44,6 +44,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       PORT: ${BACKEND_PORT}
+      MEDIA_STORAGE_DRIVER: ${MEDIA_STORAGE_DRIVER}
+      MEDIA_STORAGE_PATH: ${MEDIA_STORAGE_PATH}
+      MEDIA_MAX_FILE_SIZE_MB: ${MEDIA_MAX_FILE_SIZE_MB}
     ports:
       - "${BACKEND_PORT}:4000"
     volumes:
@@ -51,6 +54,7 @@ services:
       - ./backend/prisma:/app/prisma
       - ./backend/.env.production:/app/.env.production
       - ./backend/package.json:/app/package.json
+      - media_storage:${MEDIA_STORAGE_PATH}
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,3 +125,5 @@ volumes:
     name: creator-redis-data
   frontend_node_modules:
     name: creator-frontend-node-modules
+  media_storage:
+    name: creator-media-storage

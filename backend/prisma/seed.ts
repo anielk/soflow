@@ -70,6 +70,34 @@ async function main() {
   } else {
     console.log('Regular user already exists:', regularUserEmail);
   }
+
+  // ── Default workspace ──────────────────────────────────────────────────────
+  // Workspace-scoped features (e.g. the Media Library) need every seeded user
+  // to belong to at least one workspace; nothing else creates one yet.
+  const defaultWorkspaceSlug = 'default';
+  let workspace = await prisma.workspace.findUnique({ where: { slug: defaultWorkspaceSlug } });
+  if (!workspace) {
+    workspace = await prisma.workspace.create({
+      data: { name: 'Default Workspace', slug: defaultWorkspaceSlug },
+    });
+    console.log('Workspace created:', workspace.slug);
+  } else {
+    console.log('Workspace already exists:', workspace.slug);
+  }
+
+  for (const email of [superAdminEmail, adminEmail, regularUserEmail]) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) continue;
+    const existingMembership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
+    });
+    if (!existingMembership) {
+      await prisma.workspaceMember.create({
+        data: { workspaceId: workspace.id, userId: user.id, role: user.role === 'SUPER_ADMIN' ? 'OWNER' : 'USER' },
+      });
+      console.log('Workspace membership created for:', email);
+    }
+  }
 }
 
 main()
