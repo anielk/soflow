@@ -13,6 +13,7 @@ import {
   ActivityFeed,
   ScheduledPostsCard,
   CreatorProgressCard,
+  OnboardingChecklist,
 } from '@/components/dashboard';
 
 export default function DashboardPage() {
@@ -26,6 +27,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* First-run onboarding checklist — renders nothing once complete or dismissed */}
+      <OnboardingChecklist />
+
       {/* Period selector row */}
       <div className="flex items-center justify-end gap-4">
         <PeriodSelector value={period} onChange={setPeriod} />

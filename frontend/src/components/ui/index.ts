@@ -7,3 +7,4 @@ export { Skeleton, TextSkeleton, StatCardSkeleton } from './LoadingSkeleton';
 export { EmptyState }      from './EmptyState';
 export { Tooltip }         from './Tooltip';
 export { Modal }           from './Modal';
+export { ToastProvider, useToast } from './Toast';

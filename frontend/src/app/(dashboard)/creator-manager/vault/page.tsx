@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button, Modal, Input } from '@/components/ui';
+import { Badge, Button, Modal, Input, EmptyState, Skeleton, Tooltip, useToast } from '@/components/ui';
 import { UploadDropzone, type UploadDropzoneHandle } from '@/components/media/UploadDropzone';
 import { MediaThumbnail } from '@/components/media/MediaThumbnail';
 import { MediaPreviewModal } from '@/components/media/MediaPreviewModal';
-import { Upload, Search, Archive, Pencil, Trash2 } from 'lucide-react';
+import { Upload, Search, ImageIcon, SearchX, Pencil, Trash2, HelpCircle } from 'lucide-react';
 import { relativeTime } from '@/lib/format';
 import { deleteMedia, listMedia, renameMedia } from '@/lib/media';
 import type { MediaItem, MediaType } from '@/types/workspace';
@@ -32,6 +32,7 @@ const SORT_LABELS: Record<SortOption, string> = {
 
 export default function VaultPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const uploaderRef = useRef<UploadDropzoneHandle>(null);
 
   const [items, setItems] = useState<MediaItem[]>([]);
@@ -88,9 +89,11 @@ export default function VaultPage() {
   }, [loadMedia]);
 
   const totalSize = items.reduce((acc, v) => acc + v.sizeBytes, 0);
+  const isFiltered = filter !== 'all' || debouncedQuery.trim() !== '';
 
   const handleUploaded = () => {
     loadMedia();
+    showToast('Media uploaded', 'success');
   };
 
   const openRename = (item: MediaItem) => {
@@ -107,6 +110,7 @@ export default function VaultPage() {
       await renameMedia(renameItem.id, renameValue.trim());
       setRenameItem(null);
       await loadMedia();
+      showToast('File renamed', 'success');
     } catch (err) {
       setRenameError(err instanceof Error ? err.message : 'Failed to rename file');
     } finally {
@@ -122,6 +126,7 @@ export default function VaultPage() {
       await deleteMedia(deleteItem.id);
       setDeleteItem(null);
       await loadMedia();
+      showToast('File deleted', 'success');
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'Failed to delete file');
     } finally {
@@ -134,7 +139,12 @@ export default function VaultPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">Media Library</h1>
+          <div className="flex items-center gap-1.5">
+            <h1 className="text-xl font-semibold text-text-primary">Media Library</h1>
+            <Tooltip content="Every photo and video your team uses across posts, campaigns, and creators, stored in one place." side="right">
+              <HelpCircle size={14} className="text-text-disabled hover:text-text-muted transition-colors duration-150" />
+            </Tooltip>
+          </div>
           <p className="mt-1 text-sm text-text-muted">
             {total} files · {formatBytes(totalSize)} loaded
           </p>
@@ -210,14 +220,43 @@ export default function VaultPage() {
       )}
 
       {/* Grid */}
-      {!loading && items.length === 0 ? (
-        <div className="bg-bg-surface border border-bg-border/60 rounded-xl">
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-10 h-10 rounded-xl bg-bg-subtle flex items-center justify-center">
-              <Archive size={18} className="text-text-muted" />
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="bg-bg-surface border border-bg-border/60 rounded-xl overflow-hidden">
+              <Skeleton className="aspect-square" rounded="sm" />
+              <div className="p-2 space-y-1.5">
+                <Skeleton width="80%" height={11} rounded="sm" />
+                <Skeleton width="45%" height={10} rounded="sm" />
+              </div>
             </div>
-            <p className="text-sm text-text-muted">No media found</p>
-          </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
+        <div className="bg-bg-surface border border-bg-border/60 rounded-xl">
+          {isFiltered ? (
+            <EmptyState
+              icon={SearchX}
+              title="No files match your search"
+              description="Try a different search term, switch the type filter, or clear your filters to see everything in this library."
+              action={{ label: 'Clear filters', onClick: () => { setQuery(''); setFilter('all'); } }}
+              size="lg"
+            />
+          ) : (
+            <EmptyState
+              icon={ImageIcon}
+              title="Your media library is empty"
+              description="Store every photo and video your team uses across posts, campaigns, and creators — all in one organized place with automatic thumbnails."
+              action={{
+                label: 'Upload your first file',
+                onClick: () => {
+                  setShowUploader(true);
+                  uploaderRef.current?.openFileDialog();
+                },
+              }}
+              size="lg"
+            />
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">

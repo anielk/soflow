@@ -68,11 +68,23 @@ model Workspace {
   slug          String            @unique
   plan          String            @default("free")
   isActive      Boolean           @default(true)
+  // Branding — logo only for now; accent color and favicon are deliberately
+  // not modeled yet (still "(future)" per the sprint that added this).
+  logoUrl       String?
+  // Localization structure only — no i18n/translation framework, no locale
+  // beyond the default is actually implemented yet. These fields exist so
+  // Settings has somewhere real to persist a choice when that work lands.
+  locale        String            @default("en")
+  timezone      String            @default("UTC")
+  dateFormat    String            @default("MM/DD/YYYY")
+  numberFormat  String            @default("en-US")
+  currency      String            @default("USD")
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   members       WorkspaceMember[]
   aiConnections AIConnection[]
   media         Media[]
+  creators      Creator[]
 }
 
 model WorkspaceMember {
@@ -183,5 +195,24 @@ model Media {
   updatedAt        DateTime    @updatedAt
   workspace        Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   owner            User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  @@index([workspaceId])
+}
+
+// ─── Creators (agency-managed roster) ────────────────────────────────────────
+// A Creator is a person the agency manages content/analytics for — distinct
+// from a User (a Leinaflow login/teammate). Creators don't need their own
+// account here; workspace members manage them. Deliberately minimal: this is
+// the foundation a future Creator Management module builds on, not that
+// module itself — name/email only, no CRUD beyond create+list yet.
+
+model Creator {
+  id          String    @id @default(cuid())
+  workspaceId String
+  name        String
+  email       String?
+  avatarUrl   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   @@index([workspaceId])
 }

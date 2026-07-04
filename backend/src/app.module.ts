@@ -11,6 +11,7 @@ import { ConfigModule as AppConfigModule } from './config/config.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CreatorsModule } from './creators/creators.module';
 import { MediaModule } from './media/media.module';
+import { WorkspaceModule } from './workspace/workspace.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -30,6 +31,7 @@ import { AppController } from './app.controller';
     DashboardModule,
     CreatorsModule,
     MediaModule,
+    WorkspaceModule,
   ],
   controllers: [AppController],
 })

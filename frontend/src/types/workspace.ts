@@ -77,3 +77,71 @@ export interface Statement {
   net:         number;
   status:      StatementStatus;
 }
+
+// ─── Workspace / onboarding ────────────────────────────────────────────────
+
+export interface WorkspaceProfile {
+  id:           string;
+  name:         string;
+  slug:         string;
+  plan:         string;
+  hasLogo:      boolean;
+  locale:       string;
+  timezone:     string;
+  dateFormat:   string;
+  numberFormat: string;
+  currency:     string;
+  createdAt:    string;
+  updatedAt:    string;
+}
+
+export interface OnboardingStatus {
+  hasLogo:           boolean;
+  memberCount:       number;
+  hasTeammate:       boolean;
+  mediaCount:        number;
+  hasMedia:          boolean;
+  creatorCount:      number;
+  hasCreator:        boolean;
+  aiConnectionCount: number;
+  hasAiConnection:   boolean;
+  allRequiredDone:   boolean;
+}
+
+export interface WorkspaceMemberRecord {
+  id:       string;
+  role:     string;
+  joinedAt: string;
+  user: {
+    id:    string;
+    name:  string | null;
+    email: string;
+  };
+}
+
+export interface NewWorkspaceMember extends WorkspaceMemberRecord {
+  temporaryPassword: string | null;
+}
+
+export interface CreatorRecord {
+  id:          string;
+  workspaceId: string;
+  name:        string;
+  email:       string | null;
+  avatarUrl:   string | null;
+  createdAt:   string;
+  updatedAt:   string;
+}
+
+export interface LocaleOption {
+  value: string;
+  label: string;
+}
+
+export interface LocaleOptions {
+  locales:       LocaleOption[];
+  timezones:     LocaleOption[];
+  dateFormats:   LocaleOption[];
+  numberFormats: LocaleOption[];
+  currencies:    LocaleOption[];
+}

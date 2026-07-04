@@ -7,3 +7,4 @@ export { ActivityFeed }         from './ActivityFeed';
 export { QuickActionsRow }      from './QuickActionsRow';
 export { ScheduledPostsCard }   from './ScheduledPostsCard';
 export { CreatorProgressCard }  from './CreatorProgressCard';
+export { OnboardingChecklist }  from './OnboardingChecklist';
