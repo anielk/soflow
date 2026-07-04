@@ -37,6 +37,58 @@ healthy before printing a summary.
 Re-running `install.sh` on an already-installed host is safe — every step
 checks whether it's already done before acting.
 
+## Bootstrap — from a blank Ubuntu server
+
+`install.sh` above assumes Docker, git, and a checkout of this repo already
+exist. `deployment/bootstrap.sh` is the step before that: it takes a
+**completely clean Ubuntu server** all the way to a running Leinaflow.
+
+```bash
+git clone https://github.com/anielk/soflow.git leinaflow && cd leinaflow
+sudo ./deployment/bootstrap.sh --env production
+```
+
+`bootstrap.sh` only orchestrates — it runs nine numbered scripts under
+`deployment/bootstrap/` in order, stopping on the first failure, and the
+actual install (step 7) is entirely delegated to `deployment/install.sh`
+above. No install logic is duplicated between the two.
+
+| Step | Script | Does |
+|---|---|---|
+| 1 | `01-system-check.sh` | Root, Ubuntu version, CPU/RAM/disk, internet, ports |
+| 2 | `02-install-packages.sh` | `git curl wget openssl ca-certificates jq` |
+| 3 | `03-install-docker.sh` | Docker + Compose install, enable service, verify |
+| 4 | `04-install-git.sh` | git readiness (`safe.directory` for running as root) |
+| 5 | `05-clone-project.sh` | Clone the repo, or `git pull` if already cloned |
+| 6 | `06-create-env.sh` | Generate secrets, create missing `.env` files, validate |
+| 7 | `07-install-leinaflow.sh` | Runs `deployment/install.sh` |
+| 8 | `08-healthcheck.sh` | Runs `deployment/healthcheck.sh` |
+| 9 | `09-summary.sh` | Final summary: URLs, DB/Redis/media, Docker + project version |
+
+Configuration (env vars, all optional):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `INSTALL_DIR` | wherever `bootstrap.sh` is running from | Where the checkout that gets installed lives. Set to e.g. `/opt/leinaflow` to have bootstrap clone/manage a directory other than the one you launched it from. |
+| `PROJECT_REPO_URL` | `https://github.com/anielk/soflow.git` | What `05-clone-project.sh` clones when `INSTALL_DIR` isn't already a checkout |
+
+`--dry-run` prints the resolved config and the ordered step list without
+touching the host — use it to sanity-check before running for real:
+
+```bash
+sudo ./deployment/bootstrap.sh --env production --dry-run
+```
+
+**Future: the one-line curl install.** The eventual goal is
+`curl -fsSL https://install.leinaflow.com | sudo bash`. That needs a tiny
+separate stub hosted at that URL — nothing this sprint builds, since no such
+endpoint exists yet — whose entire job is: ensure `git` is present, `git
+clone` this repo into `INSTALL_DIR` (default `/opt/leinaflow`), then `exec`
+the real `deployment/bootstrap.sh` from that checkout so the numbered
+pipeline above takes over. `bootstrap.sh`'s `INSTALL_DIR`/`PROJECT_REPO_URL`
+variables already support being driven this way — only the small hosted
+stub itself remains to be written, later, alongside CPOS.
+
 ## Scripts reference
 
 All scripts live in `deployment/` and share two flags:
@@ -48,6 +100,7 @@ All scripts live in `deployment/` and share two flags:
 
 | Script | Purpose |
 |---|---|
+| `bootstrap.sh` | Full pipeline from a **blank Ubuntu server** to a running Leinaflow — see [Bootstrap](#bootstrap--from-a-blank-ubuntu-server) above. `--dry-run` supported. |
 | `install.sh` | Full install on a clean or partially-set-up host. Also: `--seed` / `--no-seed` to override the default seed behavior. |
 | `update.sh` | `git pull` (if applicable) → rebuild → restart → migrate → health check. |
 | `backup.sh` | Snapshot database, media, `.env`, and compose/nginx config into `backups/YYYY-MM-DD-HHMM/`. Prints the backup path. |
@@ -102,6 +155,17 @@ Deployment-script-specific variables (all optional, sensible defaults):
 ```
 deployment/
   lib/common.sh   # shared helpers — sourced, not executed
+  bootstrap.sh    # orchestrator: blank Ubuntu server -> running Leinaflow
+  bootstrap/
+    01-system-check.sh
+    02-install-packages.sh
+    03-install-docker.sh
+    04-install-git.sh
+    05-clone-project.sh
+    06-create-env.sh
+    07-install-leinaflow.sh
+    08-healthcheck.sh
+    09-summary.sh
   install.sh
   update.sh
   backup.sh
@@ -174,6 +238,14 @@ Every script here is designed to be driven non-interactively:
   so a caller can capture it directly (`BACKUP=$(deployment/backup.sh --yes | tail -1)`).
 - `restore.sh` and `uninstall.sh` support `--dry-run` to preview a destructive
   action's exact effects before an automated system commits to it.
+- `bootstrap.sh`'s nine steps are separate scripts specifically so an
+  automated caller can observe/retry a single named step instead of only
+  ever getting one pass/fail signal for the whole pipeline.
 
-CPOS itself is not implemented here — this section only documents the
-contract these scripts already honor so CPOS can call them directly later.
+**Where CPOS calls in.** On a brand-new server, CPOS's provisioning step
+would run `sudo deployment/bootstrap.sh --env production --yes` (after the
+future curl-stub hand-off described above places a checkout at
+`INSTALL_DIR`). On an existing server, CPOS drives `update.sh`/`backup.sh`/
+`restore.sh`/`healthcheck.sh` directly, exactly as documented above. CPOS
+itself is not implemented here — this section only documents the contract
+these scripts already honor so CPOS can call them directly later.

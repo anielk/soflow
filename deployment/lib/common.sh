@@ -230,3 +230,212 @@ has_internet() {
   curl -fsS --max-time 5 https://get.docker.com -o /dev/null 2>/dev/null \
     || curl -fsS --max-time 5 https://registry-1.docker.io/v2/ -o /dev/null 2>/dev/null
 }
+
+# sudo_run <cmd...> — run as root directly, or via sudo when not already root.
+sudo_run() {
+  if [[ "$(id -u)" -eq 0 ]]; then
+    "$@"
+  else
+    require_cmd sudo
+    sudo "$@"
+  fi
+}
+
+# ── Resource checks ──────────────────────────────────────────────────────
+#
+# Shared by env-check.sh and bootstrap/01-system-check.sh so the thresholds
+# and messaging can't drift between the two. Disk space below MIN_DISK_GB is
+# a hard failure (returns 1); memory/CPU shortfalls are warnings only.
+check_resources() {
+  local ok=0 available_kb available_gb total_mem_mb cpu_cores
+
+  available_kb="$(df -Pk "${PROJECT_ROOT}" | awk 'NR==2 {print $4}')"
+  available_gb=$((available_kb / 1024 / 1024))
+  if [[ "${available_gb}" -ge "${MIN_DISK_GB}" ]]; then
+    log_ok "Disk space: ${available_gb}GB available (minimum ${MIN_DISK_GB}GB)"
+  else
+    log_err "Disk space: only ${available_gb}GB available, minimum ${MIN_DISK_GB}GB required (override with MIN_DISK_GB)"
+    ok=1
+  fi
+
+  if [[ -r /proc/meminfo ]]; then
+    total_mem_mb=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) / 1024))
+    if [[ "${total_mem_mb}" -ge "${MIN_MEM_MB}" ]]; then
+      log_ok "Memory: ${total_mem_mb}MB total (minimum ${MIN_MEM_MB}MB)"
+    else
+      log_warn "Memory: only ${total_mem_mb}MB total, ${MIN_MEM_MB}MB recommended (override with MIN_MEM_MB)"
+    fi
+  else
+    log_warn "Could not read /proc/meminfo — skipping memory check."
+  fi
+
+  cpu_cores="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+  if [[ "${cpu_cores}" -ge "${MIN_CPU_CORES}" ]]; then
+    log_ok "CPU: ${cpu_cores} core(s) (minimum ${MIN_CPU_CORES})"
+  else
+    log_warn "CPU: only ${cpu_cores} core(s), ${MIN_CPU_CORES} recommended (override with MIN_CPU_CORES)"
+  fi
+
+  return "${ok}"
+}
+
+# ── Ports ────────────────────────────────────────────────────────────────
+
+port_in_use() {
+  local port="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ss -Htln "( sport = :${port} )" 2>/dev/null | grep -q . && return 0
+    ss -Htun "( sport = :${port} )" 2>/dev/null | grep -q . && return 0
+    return 1
+  fi
+  (exec 3<>"/dev/tcp/127.0.0.1/${port}") 2>/dev/null && { exec 3<&- 3>&- 2>/dev/null; return 0; } || return 1
+}
+
+# check_ports — validates the ports the resolved DEPLOY_ENV will bind are
+# free. If Leinaflow's own containers already exist, a bound port is
+# expected (idempotent re-run) rather than a conflict.
+check_ports() {
+  local already_installed=0
+  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^creator-'; then
+    already_installed=1
+  fi
+
+  local ports=()
+  if [[ "${DEPLOY_ENV}" == "development" ]]; then
+    ports=("${FRONTEND_PORT:-3000}" "${BACKEND_PORT:-4000}" "${POSTGRES_PORT:-5432}" "${REDIS_PORT:-6379}")
+  else
+    ports=(80 443)
+  fi
+
+  local conflict=0
+  for port in "${ports[@]}"; do
+    if port_in_use "${port}"; then
+      if [[ "${already_installed}" -eq 1 ]]; then
+        log_info "Port ${port} is in use (expected — Leinaflow containers already exist here)."
+      else
+        log_err "Port ${port} is already in use by another process."
+        conflict=1
+      fi
+    else
+      log_ok "Port ${port} is free."
+    fi
+  done
+  [[ "${conflict}" -eq 0 ]]
+}
+
+# ── Docker installation ──────────────────────────────────────────────────
+#
+# Shared by install.sh and bootstrap/03-install-docker.sh — one
+# implementation of "get Docker onto this box" for both entry points.
+# Requires detect_os to have been called first (needs OS_FAMILY/OS_ID).
+
+ensure_docker_installed() {
+  if command -v docker >/dev/null 2>&1; then
+    log_ok "Docker already installed: $(docker --version)"
+    return 0
+  fi
+
+  log_info "Docker not found — installing for ${OS_FAMILY} (${OS_ID} ${OS_VERSION})..."
+  require_cmd curl
+
+  case "${OS_FAMILY}" in
+    debian)
+      local codename="${VERSION_CODENAME:-}"
+      [[ -n "${codename}" ]] || { log_err "Could not determine distro codename from /etc/os-release."; return 1; }
+      local arch; arch="$(dpkg --print-architecture)"
+      sudo_run apt-get update -y
+      sudo_run apt-get install -y ca-certificates curl gnupg
+      sudo_run install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL "https://download.docker.com/linux/${OS_ID}/gpg" | sudo_run tee /etc/apt/keyrings/docker.asc >/dev/null
+      sudo_run chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${OS_ID} ${codename} stable" \
+        | sudo_run tee /etc/apt/sources.list.d/docker.list >/dev/null
+      sudo_run apt-get update -y
+      sudo_run apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      ;;
+    rhel)
+      local pkgmgr; command -v dnf >/dev/null 2>&1 && pkgmgr=dnf || pkgmgr=yum
+      sudo_run "${pkgmgr}" install -y yum-utils
+      sudo_run "${pkgmgr}" config-manager --add-repo "https://download.docker.com/linux/centos/docker-ce.repo"
+      sudo_run "${pkgmgr}" install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      sudo_run systemctl enable --now docker
+      ;;
+  esac
+
+  require_cmd docker
+  log_ok "Docker installed: $(docker --version)"
+}
+
+ensure_compose_available() {
+  if detect_compose_cmd 2>/dev/null; then
+    log_ok "Docker Compose available: ${COMPOSE}"
+    return 0
+  fi
+
+  log_info "Docker Compose plugin not found — installing..."
+  case "${OS_FAMILY}" in
+    debian) sudo_run apt-get update -y; sudo_run apt-get install -y docker-compose-plugin ;;
+    rhel)
+      local pkgmgr; command -v dnf >/dev/null 2>&1 && pkgmgr=dnf || pkgmgr=yum
+      sudo_run "${pkgmgr}" install -y docker-compose-plugin
+      ;;
+  esac
+  detect_compose_cmd || { log_err "Docker Compose still unavailable after install."; return 1; }
+}
+
+# ── Environment files ────────────────────────────────────────────────────
+#
+# Shared by install.sh and bootstrap/06-create-env.sh.
+
+generate_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 32
+  else
+    head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'
+  fi
+}
+
+# fill_blank_secret <file> <VAR> — if VAR is present but empty, fill it with
+# a freshly generated secret. Never touches a var that already has a value.
+fill_blank_secret() {
+  local file="$1" var="$2"
+  if grep -qE "^${var}=$" "${file}"; then
+    local secret; secret="$(generate_secret)"
+    sed -i "s|^${var}=\$|${var}=${secret}|" "${file}"
+    log_ok "Generated ${var} in $(basename "${file}")"
+  fi
+}
+
+# ensure_env_files <target_dir> — creates <target_dir>/.env and
+# <target_dir>/.env.production from .env.production.example if missing,
+# generating JWT_SECRET/SESSION_SECRET when left blank. Both .env (compose
+# variable interpolation) and .env.production (what the backend/frontend
+# containers actually load via `env_file:` in docker-compose.yml) are
+# created from the same template — see docs/Deployment.md's environment
+# variables section for why there are two.
+ensure_env_files() {
+  local target_dir="${1:-${PROJECT_ROOT}}"
+  local template="${target_dir}/.env.production.example"
+  [[ -f "${template}" ]] || { log_err "Template not found: ${template}"; return 1; }
+
+  local created_any=0
+  for target in .env .env.production; do
+    local path="${target_dir}/${target}"
+    if [[ -f "${path}" ]]; then
+      log_ok "${target} already exists — leaving it untouched."
+    else
+      cp "${template}" "${path}"
+      fill_blank_secret "${path}" JWT_SECRET
+      fill_blank_secret "${path}" SESSION_SECRET
+      log_warn "${target} created from template at ${path} — review POSTGRES_PASSWORD before using this in production."
+      created_any=1
+    fi
+  done
+
+  if [[ "${created_any}" -eq 1 ]]; then
+    confirm "Continue with the generated environment files as-is?" || {
+      log_info "Edit .env / .env.production in ${target_dir} then re-run."
+      return 1
+    }
+  fi
+}

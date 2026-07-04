@@ -50,34 +50,8 @@ else
   fail "Project root is not writable: ${PROJECT_ROOT}"
 fi
 
-# ── Disk space ───────────────────────────────────────────────────────────
-AVAILABLE_KB="$(df -Pk "${PROJECT_ROOT}" | awk 'NR==2 {print $4}')"
-AVAILABLE_GB=$((AVAILABLE_KB / 1024 / 1024))
-if [[ "${AVAILABLE_GB}" -ge "${MIN_DISK_GB}" ]]; then
-  log_ok "Disk space: ${AVAILABLE_GB}GB available (minimum ${MIN_DISK_GB}GB)"
-else
-  fail "Disk space: only ${AVAILABLE_GB}GB available, minimum ${MIN_DISK_GB}GB required (override with MIN_DISK_GB)"
-fi
-
-# ── Memory ───────────────────────────────────────────────────────────────
-if [[ -r /proc/meminfo ]]; then
-  TOTAL_MEM_MB=$(($(awk '/MemTotal/ {print $2}' /proc/meminfo) / 1024))
-  if [[ "${TOTAL_MEM_MB}" -ge "${MIN_MEM_MB}" ]]; then
-    log_ok "Memory: ${TOTAL_MEM_MB}MB total (minimum ${MIN_MEM_MB}MB)"
-  else
-    log_warn "Memory: only ${TOTAL_MEM_MB}MB total, ${MIN_MEM_MB}MB recommended (override with MIN_MEM_MB)"
-  fi
-else
-  log_warn "Could not read /proc/meminfo — skipping memory check."
-fi
-
-# ── CPU ──────────────────────────────────────────────────────────────────
-CPU_CORES="$(nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
-if [[ "${CPU_CORES}" -ge "${MIN_CPU_CORES}" ]]; then
-  log_ok "CPU: ${CPU_CORES} core(s) (minimum ${MIN_CPU_CORES})"
-else
-  log_warn "CPU: only ${CPU_CORES} core(s), ${MIN_CPU_CORES} recommended (override with MIN_CPU_CORES)"
-fi
+# ── Disk / Memory / CPU ────────────────────────────────────────────────────
+check_resources || FAILED=1
 
 # ── Environment variables ─────────────────────────────────────────────────
 load_env
