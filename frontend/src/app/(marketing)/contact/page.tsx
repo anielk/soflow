@@ -3,6 +3,7 @@ import { Briefcase, Calendar, Mail } from 'lucide-react';
 import { Container } from '@/components/marketing/Container';
 import { Card } from '@/components/ui';
 import { DemoRequestForm } from '@/components/marketing/DemoRequestForm';
+import { ContactForm } from '@/components/marketing/ContactForm';
 
 export const metadata: Metadata = {
   title: 'Contact',
@@ -31,24 +32,23 @@ export default function ContactPage() {
 
       <section className="pb-24">
         <Container>
-          <div className="grid lg:grid-cols-3 gap-6 items-start">
+          <div className="grid lg:grid-cols-2 gap-6 items-start">
             <Card variant="elevated" padding="lg">
               <div className="w-10 h-10 rounded-xl bg-violet-600/15 flex items-center justify-center">
                 <Mail size={20} className="text-violet-400" />
               </div>
               <h2 className="mt-4 text-lg font-semibold text-text-primary">General Inquiries</h2>
-              <p className="mt-2 text-sm text-text-muted leading-relaxed">
-                Questions about the platform, your account, or anything else.
+              <p className="mt-2 text-sm text-text-muted leading-relaxed mb-6">
+                Questions about the platform, your account, or anything else — or email us directly at{' '}
+                <a href="mailto:hello@leinaflow.com" className="text-violet-400 hover:text-violet-300 transition-colors">
+                  hello@leinaflow.com
+                </a>
+                .
               </p>
-              <a
-                href="mailto:hello@leinaflow.com"
-                className="mt-4 inline-block text-sm font-medium text-violet-400 hover:text-violet-300 transition-colors"
-              >
-                hello@leinaflow.com
-              </a>
+              <ContactForm />
             </Card>
 
-            <Card variant="elevated" padding="lg" className="lg:col-span-2">
+            <Card variant="elevated" padding="lg">
               <div className="w-10 h-10 rounded-xl bg-violet-600/15 flex items-center justify-center">
                 <Calendar size={20} className="text-violet-400" />
               </div>
@@ -59,7 +59,7 @@ export default function ContactPage() {
               <DemoRequestForm />
             </Card>
 
-            <Card variant="elevated" padding="lg" className="lg:col-span-3">
+            <Card variant="elevated" padding="lg" className="lg:col-span-2">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
                 <div className="w-10 h-10 rounded-xl bg-violet-600/15 flex items-center justify-center shrink-0">
                   <Briefcase size={20} className="text-violet-400" />

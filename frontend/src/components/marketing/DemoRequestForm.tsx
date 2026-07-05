@@ -1,39 +1,53 @@
 'use client';
 
 import { useState } from 'react';
-import { Send } from 'lucide-react';
+import { Send, CheckCircle2 } from 'lucide-react';
 import { Button, Input, Textarea } from '@/components/ui';
+import { submitDemoRequest } from '@/lib/notification';
 
-const DEMO_EMAIL = 'hello@leinaflow.com';
-
-// There is no backend endpoint for this form (none exists, none is in scope
-// for the marketing site) — rather than fake a "message sent" success state,
-// submitting genuinely opens a pre-filled email to the team via mailto:.
 export function DemoRequestForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const subject = `Demo request from ${name || 'a Leinaflow visitor'}`;
-    const body = [
-      `Name: ${name}`,
-      `Email: ${email}`,
-      `Company: ${company}`,
-      '',
-      message,
-    ].join('\n');
-    const mailto = `mailto:${DEMO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await submitDemoRequest({ name, email, company: company || undefined, message: message || undefined });
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send your demo request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="flex items-start gap-3 bg-success-subtle border border-success/20 rounded-xl p-4">
+        <CheckCircle2 size={18} className="text-success-text shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-text-primary">Request sent</p>
+          <p className="text-sm text-text-muted mt-0.5">
+            Thanks, {name.split(' ')[0] || 'there'} — the Leinaflow team will reach out to {email} shortly.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+        <Input id="demo-name" label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
         <Input
+          id="demo-email"
           label="Work email"
           type="email"
           value={email}
@@ -41,14 +55,16 @@ export function DemoRequestForm() {
           required
         />
       </div>
-      <Input label="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
+      <Input id="demo-company" label="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
       <Textarea
+        id="demo-message"
         label="What would you like to see in the demo?"
         rows={4}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
       />
-      <Button type="submit" variant="primary" size="lg" icon={Send} className="self-start">
+      {error && <p className="text-sm text-danger-text">{error}</p>}
+      <Button type="submit" variant="primary" size="lg" icon={Send} loading={submitting} className="self-start">
         Request a Demo
       </Button>
     </form>

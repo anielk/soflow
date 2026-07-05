@@ -7,12 +7,14 @@ import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageModule } from '../storage/storage.module';
+import { NotificationModule } from '../notification/notification.module';
 import { WorkspaceController } from './workspace.controller';
 import { WorkspaceService } from './workspace.service';
 
 @Module({
   imports: [
     StorageModule,
+    NotificationModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

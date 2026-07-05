@@ -11,4 +11,22 @@ export const envValidationSchema = Joi.object({
   MEDIA_STORAGE_DRIVER: Joi.string().valid('local').default('local'),
   MEDIA_STORAGE_PATH: Joi.string().default('/data/media'),
   MEDIA_MAX_FILE_SIZE_MB: Joi.number().default(2048),
+
+  // Public URL used to build links inside emails (reset links, invite links, ...).
+  FRONTEND_URL: Joi.string().default('http://localhost:3000'),
+
+  // Notifications — "smtp" is the only implemented driver today; the app is
+  // structured so teams/slack/discord/push/sms can be added as new
+  // NotificationProvider implementations without touching call sites.
+  NOTIFICATION_DRIVER: Joi.string().valid('smtp').default('smtp'),
+  NOTIFICATION_TEAM_EMAIL: Joi.string().email({ tlds: false }).default('hello@leinaflow.com'),
+
+  SMTP_HOST: Joi.string().default('localhost'),
+  SMTP_PORT: Joi.number().default(587),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow('').default(''),
+  SMTP_PASSWORD: Joi.string().allow('').default(''),
+  SMTP_FROM_NAME: Joi.string().default('Leinaflow'),
+  SMTP_FROM_EMAIL: Joi.string().email({ tlds: false }).default('noreply@leinaflow.com'),
+  SMTP_REPLY_TO: Joi.string().email({ tlds: false }).allow('').default(''),
 });

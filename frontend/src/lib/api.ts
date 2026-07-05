@@ -93,6 +93,14 @@ export async function changePassword(dto: { currentPassword: string; newPassword
   return apiPut<{ success: boolean; message: string }>('/users/change-password', dto);
 }
 
+export async function requestPasswordReset(email: string) {
+  return apiPost<{ success: boolean; message: string }>('/auth/forgot-password', { email });
+}
+
+export async function resetPassword(dto: { token: string; newPassword: string }) {
+  return apiPost<{ success: boolean; message: string }>('/auth/reset-password', dto);
+}
+
 export const apiClient = {
   get: apiGet,
   post: apiPost,

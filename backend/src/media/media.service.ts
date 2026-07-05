@@ -9,6 +9,8 @@ import { ThumbnailService } from './thumbnail.service';
 import { validateUploadedFile } from './validators/file-validation';
 import { ListMediaQueryDto } from './dto/list-media-query.dto';
 import { RenameMediaDto } from './dto/rename-media.dto';
+import { SystemEventsService } from '../events/system-events.service';
+import { EVENT_TYPES } from '../events/event-types';
 
 const MANAGE_ROLES: Role[] = [Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN];
 const OWNER_SELECT = { id: true, name: true, email: true } satisfies Prisma.UserSelect;
@@ -42,6 +44,7 @@ export class MediaService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly thumbnailService: ThumbnailService,
+    private readonly systemEvents: SystemEventsService,
   ) {}
 
   /**
@@ -124,6 +127,18 @@ export class MediaService {
         thumbnailPath: thumbnailKey,
       },
       include: { owner: { select: OWNER_SELECT } },
+    });
+
+    const actorName = updated.owner.name || updated.owner.email;
+    this.systemEvents.publish({
+      type: EVENT_TYPES.MEDIA_UPLOADED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Media',
+      targetId: updated.id,
+      message: `${actorName} uploaded ${updated.originalFilename}`,
+      metadata: { type: updated.type, sizeBytes: updated.sizeBytes.toString() },
     });
 
     return this.toResponse(updated);
@@ -223,6 +238,17 @@ export class MediaService {
       await this.storageService.delete(`${media.thumbnailPath}_md.jpg`).catch(() => undefined);
     }
     await this.prisma.media.delete({ where: { id } });
+
+    const actorName = media.owner.name || media.owner.email;
+    this.systemEvents.publish({
+      type: EVENT_TYPES.MEDIA_DELETED,
+      workspaceId: media.workspaceId,
+      userId,
+      actorName,
+      targetType: 'Media',
+      targetId: media.id,
+      message: `${actorName} deleted ${media.originalFilename}`,
+    });
   }
 
   private buildKey(workspaceId: string, filename: string): string {

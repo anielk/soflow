@@ -11,6 +11,8 @@ import {
   ScrollText,
   ToggleLeft,
   Settings,
+  Mail,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -30,9 +32,11 @@ export const adminNavItems: AdminNavItem[] = [
   { id: 'admin-subscriptions',  label: 'Subscriptions',   href: '/admin/subscriptions', icon: CreditCard      },
   { id: 'admin-billing',        label: 'Billing',         href: '/admin/billing',       icon: Receipt         },
   { id: 'admin-ai',             label: 'AI',              href: '/admin/ai',            icon: Bot             },
+  { id: 'admin-communication',  label: 'Communication',   href: '/admin/communication', icon: Mail            },
   { id: 'admin-connectors',     label: 'Connectors',      href: '/admin/connectors',    icon: Plug            },
   { id: 'admin-infrastructure', label: 'Infrastructure',  href: '/admin/infrastructure',icon: Server          },
   { id: 'admin-logs',           label: 'Logs',            href: '/admin/logs',          icon: ScrollText      },
+  { id: 'admin-system',         label: 'System',          href: '/admin/system',        icon: Activity        },
   { id: 'admin-flags',          label: 'Feature Flags',   href: '/admin/feature-flags', icon: ToggleLeft      },
   { id: 'admin-settings',       label: 'System Settings', href: '/admin/settings',      icon: Settings        },
 ];

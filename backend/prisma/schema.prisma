@@ -30,6 +30,10 @@ model User {
   bannerUrl     String?
   isCreator     Boolean           @default(false)
   role          Role              @default(USER)
+  // Password reset — resetTokenHash stores sha256(rawToken), never the raw
+  // token itself, so a database read alone can't be used to reset a password.
+  resetTokenHash      String?   @unique
+  resetTokenExpiresAt DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
   creatorProfile CreatorProfile?
@@ -215,4 +219,66 @@ model Creator {
   updatedAt   DateTime  @updatedAt
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   @@index([workspaceId])
+}
+
+// ─── Observability & audit foundation ────────────────────────────────────────
+// AuditLog/ActivityLog deliberately have NO Prisma @relation to User/Workspace.
+// An audit trail must outlive the entities it describes — if a user or
+// workspace is later deleted, its history must not cascade away or dangle a
+// broken foreign key. workspaceId/userId are plain, unvalidated references;
+// look up the live record separately if it still exists.
+
+enum AuditCategory {
+  AUTH
+  WORKSPACE
+  MEDIA
+  CREATOR
+  USER
+  NOTIFICATION
+  SETTINGS
+  SECURITY
+  SYSTEM
+}
+
+// Structured, append-only trail for administrators/CPOS. Never updated or
+// deleted by the application — see AuditService for the write path (it's the
+// only writer) and audit.controller.ts for the read-only query surface.
+model AuditLog {
+  id          String        @id @default(cuid())
+  workspaceId String?
+  userId      String?
+  eventType   String
+  category    AuditCategory
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime      @default(now())
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([category])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// Human-readable, workspace-facing trail ("John uploaded a video"). Separate
+// from AuditLog on purpose: activity is for people, audit is for admins —
+// activity omits security-sensitive events (failed logins, etc.) and stores
+// a denormalized actorName so entries stay readable even if the user is
+// later removed from the workspace.
+model ActivityLog {
+  id          String        @id @default(cuid())
+  workspaceId String?
+  userId      String?
+  actorName   String?
+  message     String
+  category    AuditCategory
+  targetType  String?
+  targetId    String?
+  createdAt   DateTime      @default(now())
+
+  @@index([workspaceId])
+  @@index([createdAt])
 }

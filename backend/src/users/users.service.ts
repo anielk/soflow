@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, CreatorProfile } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { SystemEventsService } from '../events/system-events.service';
+import { EVENT_TYPES } from '../events/event-types';
 
 interface UserData {
   email: string;
@@ -21,7 +23,10 @@ interface UpdateProfileDto {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly systemEvents: SystemEventsService,
+  ) {}
 
   async findAll(): Promise<User[]> {
     return this.prisma.user.findMany();
@@ -32,6 +37,24 @@ export class UsersService {
       where: {
         email,
       },
+    });
+  }
+
+  async setResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { resetTokenHash: tokenHash, resetTokenExpiresAt: expiresAt },
+    });
+  }
+
+  async findByResetTokenHash(tokenHash: string): Promise<User | null> {
+    return this.prisma.user.findUnique({ where: { resetTokenHash: tokenHash } });
+  }
+
+  async clearResetTokenAndSetPassword(userId: string, passwordHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
     });
   }
 
@@ -93,6 +116,16 @@ export class UsersService {
     await this.prisma.user.update({
       where: { id: userId },
       data: { passwordHash: hashedPassword },
+    });
+
+    const actorName = user.name || user.email;
+    this.systemEvents.publish({
+      type: EVENT_TYPES.AUTH_PASSWORD_CHANGED,
+      userId,
+      actorName,
+      targetType: 'User',
+      targetId: userId,
+      message: `${actorName} changed their password`,
     });
 
     return true;

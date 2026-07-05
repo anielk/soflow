@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID, randomBytes } from 'crypto';
 import * as fs from 'fs/promises';
 import * as bcrypt from 'bcryptjs';
@@ -7,6 +8,10 @@ import { Readable } from 'stream';
 import { Role, Workspace } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { NotificationService } from '../notification/notification.service';
+import { inviteUserTemplate } from '../notification/templates/invite-user.template';
+import { SystemEventsService } from '../events/system-events.service';
+import { EVENT_TYPES } from '../events/event-types';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
@@ -32,10 +37,20 @@ export interface WorkspaceResponse {
 
 @Injectable()
 export class WorkspaceService {
+  private readonly logger = new Logger(WorkspaceService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly notificationService: NotificationService,
+    private readonly configService: ConfigService,
+    private readonly systemEvents: SystemEventsService,
   ) {}
+
+  private async getActorDisplayName(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } });
+    return user?.name || user?.email || 'Someone';
+  }
 
   /**
    * Duplicated from MediaService.resolveWorkspaceId rather than importing
@@ -71,6 +86,19 @@ export class WorkspaceService {
     this.assertCanManage(role);
     const workspaceId = await this.resolveWorkspaceId(userId);
     const workspace = await this.prisma.workspace.update({ where: { id: workspaceId }, data: dto });
+
+    const actorName = await this.getActorDisplayName(userId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.WORKSPACE_UPDATED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Workspace',
+      targetId: workspaceId,
+      message: `${actorName} updated workspace settings`,
+      metadata: { fields: Object.keys(dto) },
+    });
+
     return this.toResponse(workspace);
   }
 
@@ -106,6 +134,18 @@ export class WorkspaceService {
     }
 
     const updated = await this.prisma.workspace.update({ where: { id: workspaceId }, data: { logoUrl: key } });
+
+    const actorName = await this.getActorDisplayName(userId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.WORKSPACE_LOGO_CHANGED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Workspace',
+      targetId: workspaceId,
+      message: `${actorName} updated the workspace logo`,
+    });
+
     return this.toResponse(updated);
   }
 
@@ -184,6 +224,20 @@ export class WorkspaceService {
       include: { user: { select: { id: true, name: true, email: true } } },
     });
 
+    const actorName = await this.getActorDisplayName(userId);
+    const emailSent = await this.sendInviteEmail(workspaceId, actorName, member.user, temporaryPassword);
+
+    this.systemEvents.publish({
+      type: EVENT_TYPES.USER_INVITED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'User',
+      targetId: member.user.id,
+      message: `${actorName} invited ${member.user.name || member.user.email}`,
+      metadata: { newAccount: Boolean(temporaryPassword), emailSent },
+    });
+
     return {
       id: member.id,
       role: member.role,
@@ -192,7 +246,37 @@ export class WorkspaceService {
       // null when adding an existing account to the workspace — only a
       // freshly created login has a password to hand over.
       temporaryPassword,
+      // The member is added either way — a failed invite email is
+      // best-effort and surfaced to the admin, not a reason to roll back.
+      emailSent,
     };
+  }
+
+  private async sendInviteEmail(
+    workspaceId: string,
+    inviterName: string,
+    recipient: { name: string | null; email: string },
+    temporaryPassword: string | null,
+  ): Promise<boolean> {
+    try {
+      const workspace = await this.prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId }, select: { name: true } });
+      await this.notificationService.sendTemplate(recipient.email, inviteUserTemplate, {
+        recipientName: recipient.name || recipient.email,
+        workspaceName: workspace.name,
+        inviterName,
+        loginUrl: `${this.frontendUrl()}/login`,
+        temporaryEmail: temporaryPassword ? recipient.email : undefined,
+        temporaryPassword: temporaryPassword ?? undefined,
+      });
+      return true;
+    } catch (err) {
+      this.logger.warn(`Invite email failed for ${recipient.email}: ${err instanceof Error ? err.message : 'unknown error'}`);
+      return false;
+    }
+  }
+
+  private frontendUrl(): string {
+    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000').replace(/\/$/, '');
   }
 
   async listMembers(userId: string) {
@@ -207,9 +291,22 @@ export class WorkspaceService {
 
   async addCreator(userId: string, dto: AddCreatorDto) {
     const workspaceId = await this.resolveWorkspaceId(userId);
-    return this.prisma.creator.create({
+    const creator = await this.prisma.creator.create({
       data: { workspaceId, name: dto.name, email: dto.email },
     });
+
+    const actorName = await this.getActorDisplayName(userId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.CREATOR_CREATED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Creator',
+      targetId: creator.id,
+      message: `${actorName} created creator "${creator.name}"`,
+    });
+
+    return creator;
   }
 
   async listCreators(userId: string) {

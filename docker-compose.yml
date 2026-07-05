@@ -47,6 +47,17 @@ services:
       MEDIA_STORAGE_DRIVER: ${MEDIA_STORAGE_DRIVER}
       MEDIA_STORAGE_PATH: ${MEDIA_STORAGE_PATH}
       MEDIA_MAX_FILE_SIZE_MB: ${MEDIA_MAX_FILE_SIZE_MB}
+      FRONTEND_URL: ${FRONTEND_URL}
+      NOTIFICATION_DRIVER: ${NOTIFICATION_DRIVER}
+      NOTIFICATION_TEAM_EMAIL: ${NOTIFICATION_TEAM_EMAIL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+      SMTP_REPLY_TO: ${SMTP_REPLY_TO}
     ports:
       - "${BACKEND_PORT}:4000"
     volumes:
@@ -60,6 +71,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     networks:
       - creator-network
     security_opt:
@@ -93,6 +106,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - creator-network
+
+  # Dev-only SMTP catcher — lets the real SmtpProvider send real SMTP
+  # traffic somewhere during local development/testing without needing real
+  # mail credentials. Not part of the Leinaflow application; production
+  # points SMTP_HOST at the real Cloudivo mail service via env vars only.
+  mailhog:
+    container_name: creator-mailhog
+    image: mailhog/mailhog:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
     networks:
       - creator-network
 

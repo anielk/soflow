@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from './api';
+
 export const setAuthToken = (token: string) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('authToken', token);
@@ -22,6 +24,14 @@ export const isAuthenticated = (): boolean => {
 };
 
 export const logout = () => {
+  const token = getAuthToken();
+  if (token && typeof window !== 'undefined') {
+    // Fire-and-forget — JWTs are stateless, so this only records the logout
+    // for audit purposes. It must never delay or block clearing the local
+    // session below.
+    const base = getApiBaseUrl().replace(/\/$/, '');
+    fetch(`${base}/auth/logout`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
+  }
   removeAuthToken();
   if (typeof window !== 'undefined') {
     window.location.href = '/login';

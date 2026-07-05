@@ -121,6 +121,7 @@ export interface WorkspaceMemberRecord {
 
 export interface NewWorkspaceMember extends WorkspaceMemberRecord {
   temporaryPassword: string | null;
+  emailSent: boolean;
 }
 
 export interface CreatorRecord {

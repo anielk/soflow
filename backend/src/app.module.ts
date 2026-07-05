@@ -12,6 +12,11 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { CreatorsModule } from './creators/creators.module';
 import { MediaModule } from './media/media.module';
 import { WorkspaceModule } from './workspace/workspace.module';
+import { NotificationModule } from './notification/notification.module';
+import { EventsModule } from './events/events.module';
+import { AuditModule } from './audit/audit.module';
+import { ActivityModule } from './activity/activity.module';
+import { SystemModule } from './system/system.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -23,6 +28,7 @@ import { AppController } from './app.controller';
     }),
     PrismaModule,
     RedisModule,
+    EventsModule,
     HealthModule,
     AuthModule,
     UsersModule,
@@ -32,6 +38,10 @@ import { AppController } from './app.controller';
     CreatorsModule,
     MediaModule,
     WorkspaceModule,
+    NotificationModule,
+    AuditModule,
+    ActivityModule,
+    SystemModule,
   ],
   controllers: [AppController],
 })
