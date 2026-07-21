@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './api';
+import { apiUrl, authHeaders, parseUploadErrorMessage, throwOnError } from './api';
 import { getAuthToken } from './auth';
 import type {
   CreatorRecord,
@@ -8,28 +8,6 @@ import type {
   WorkspaceMemberRecord,
   WorkspaceProfile,
 } from '@/types/workspace';
-
-function apiUrl(path: string): string {
-  const base = getApiBaseUrl().replace(/\/$/, '');
-  return `${base}/${path.replace(/^\//, '')}`;
-}
-
-function authHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function throwOnError(response: Response, fallback: string): Promise<void> {
-  if (response.ok) return;
-  let message = fallback;
-  try {
-    const parsed = await response.json();
-    if (parsed?.error ?? parsed?.message) message = parsed.error ?? parsed.message;
-  } catch {
-    // response body wasn't JSON — keep the fallback message
-  }
-  throw new Error(message);
-}
 
 export async function getWorkspace(): Promise<WorkspaceProfile> {
   const response = await fetch(apiUrl('/workspace'), { headers: authHeaders(), cache: 'no-store' });
@@ -114,14 +92,7 @@ export function uploadWorkspaceLogo(file: File, options: UploadOptions = {}): Pr
         }
         return;
       }
-      let message = `Upload failed (${xhr.status})`;
-      try {
-        const parsed = JSON.parse(xhr.responseText);
-        if (parsed?.error ?? parsed?.message) message = parsed.error ?? parsed.message;
-      } catch {
-        // response body wasn't JSON — keep the generic message
-      }
-      reject(new Error(message));
+      reject(new Error(parseUploadErrorMessage(xhr.responseText, `Upload failed (${xhr.status})`)));
     };
 
     xhr.onerror = () => reject(new Error('Upload failed — network error'));

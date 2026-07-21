@@ -15,6 +15,12 @@ export const envValidationSchema = Joi.object({
   // Public URL used to build links inside emails (reset links, invite links, ...).
   FRONTEND_URL: Joi.string().default('http://localhost:3000'),
 
+  // Global request rate limit — a rolling window, not a lifetime counter.
+  // Keyed per client IP (see main.ts's `trust proxy` setting, which makes
+  // that IP the real client behind nginx's X-Forwarded-For, not the proxy).
+  RATE_LIMIT_TTL_MS: Joi.number().default(60000),
+  RATE_LIMIT_MAX: Joi.number().default(300),
+
   // Notifications — "smtp" is the only implemented driver today; the app is
   // structured so teams/slack/discord/push/sms can be added as new
   // NotificationProvider implementations without touching call sites.

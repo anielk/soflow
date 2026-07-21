@@ -1,27 +1,4 @@
-import { getApiBaseUrl } from './api';
-import { getAuthToken } from './auth';
-
-function apiUrl(path: string): string {
-  const base = getApiBaseUrl().replace(/\/$/, '');
-  return `${base}/${path.replace(/^\//, '')}`;
-}
-
-function authHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function throwOnError(response: Response, fallback: string): Promise<void> {
-  if (response.ok) return;
-  let message = fallback;
-  try {
-    const parsed = await response.json();
-    if (parsed?.message ?? parsed?.error) message = parsed.message ?? parsed.error;
-  } catch {
-    // response body wasn't JSON — keep the fallback message
-  }
-  throw new Error(message);
-}
+import { apiUrl, authHeaders, throwOnError } from './api';
 
 export interface DemoRequestInput {
   name: string;

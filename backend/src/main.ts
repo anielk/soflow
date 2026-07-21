@@ -7,12 +7,17 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
-  
+
+  // This app sits behind nginx/the frontend's dev proxy — trust its
+  // X-Forwarded-For so req.ip (what ThrottlerGuard keys rate limits on)
+  // reflects the real client, not the proxy's own address for every request.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   // Set WebSocket adapter explicitly to avoid "No driver (WebSockets) has been selected" error
   app.useWebSocketAdapter(new IoAdapter(app.getHttpServer()));
-  
+
   // Security headers
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
+  app.use((_req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-DNS-Prefetch-Control', 'off');
     res.setHeader('X-Download-Options', 'noopen');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -22,25 +27,10 @@ async function bootstrap(): Promise<void> {
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     next();
   });
-  
-  // Rate limiting
-  const requestTimings = new Map<string, { startTime: number, count: number }>();
-  
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
-    const requestId = req.socket.remoteAddress! + req.method;
-    const timing = requestTimings.get(requestId) || { startTime: Date.now(), count: 0 };
-    requestTimings.set(requestId, timing);
-    
-    let currentCount = timing.count;
-    currentCount += 1;
-    requestTimings.set(requestId, { startTime: timing.startTime, count: currentCount });
-    
-    if (currentCount > 100) {
-      return res.send('Too Many Requests');
-    }
-    
-    next();
-  });
+
+  // Rate limiting is handled by ThrottlerModule/ThrottlerGuard, registered
+  // globally in AppModule — see docs/architecture/rate-limiting.md for why
+  // the hand-rolled version that used to live here was removed.
 
   app.setGlobalPrefix('v1', { exclude: [''] });
   app.enableCors();
@@ -55,7 +45,7 @@ async function bootstrap(): Promise<void> {
 
   const port = process.env.PORT ? Number(process.env.PORT) : 4000;
   await app.listen(port, '0.0.0.0');
-  
+
   Logger.log(`Application is running on: http://localhost:${port}/v1`, 'Bootstrap');
 }
 

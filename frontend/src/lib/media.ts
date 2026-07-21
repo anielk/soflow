@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from './api';
+import { apiUrl, authHeaders, parseUploadErrorMessage, throwOnError } from './api';
 import { getAuthToken } from './auth';
 import type { MediaFileStatus, MediaItem, MediaType } from '@/types/workspace';
 
@@ -43,28 +43,6 @@ function mapMedia(raw: RawMedia): MediaItem {
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
   };
-}
-
-function apiUrl(path: string): string {
-  const base = getApiBaseUrl().replace(/\/$/, '');
-  return `${base}/${path.replace(/^\//, '')}`;
-}
-
-function authHeaders(): HeadersInit {
-  const token = getAuthToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-async function throwOnError(response: Response, fallback: string): Promise<void> {
-  if (response.ok) return;
-  let message = fallback;
-  try {
-    const parsed = await response.json();
-    if (parsed?.error) message = parsed.error;
-  } catch {
-    // response body wasn't JSON — keep the fallback message
-  }
-  throw new Error(message);
 }
 
 export interface ListMediaParams {
@@ -174,14 +152,7 @@ export function uploadMedia(file: File, options: UploadOptions = {}): Promise<Me
         }
         return;
       }
-      let message = `Upload failed (${xhr.status})`;
-      try {
-        const parsed = JSON.parse(xhr.responseText);
-        if (parsed?.error) message = parsed.error;
-      } catch {
-        // response body wasn't JSON — keep the generic message
-      }
-      reject(new Error(message));
+      reject(new Error(parseUploadErrorMessage(xhr.responseText, `Upload failed (${xhr.status})`)));
     };
 
     xhr.onerror = () => reject(new Error('Upload failed — network error'));
