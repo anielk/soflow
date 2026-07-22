@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { User } from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import { NotificationService } from '../notification/notification.service';
@@ -12,6 +12,11 @@ import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
 
 const RESET_TOKEN_TTL_MINUTES = 15;
+
+// A precomputed bcrypt hash with no matching password, compared against when
+// no user is found so unknown-email and wrong-password logins take the same
+// time — otherwise skipping bcrypt for unknown emails leaks account existence.
+const DUMMY_PASSWORD_HASH = '$2b$10$aInybw7eA81LAjVTzZHNF.NaHcVBGr8s2WmN0.P8UACrMs4MIzzyC';
 
 @Injectable()
 export class AuthService {
@@ -27,8 +32,9 @@ export class AuthService {
 
   async validateUser(email: string, password: string, ipAddress?: string, userAgent?: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
+    const passwordValid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    if (!user || !passwordValid) {
       // No `message` — failed logins are audited but intentionally never
       // shown in the human-facing activity feed.
       this.systemEvents.publish({
@@ -85,7 +91,15 @@ export class AuthService {
 
   async register(email: string, password: string) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await this.usersService.create({ email, passwordHash: hashedPassword });
+    let user: User;
+    try {
+      user = await this.usersService.create({ email, passwordHash: hashedPassword });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('An account with that email already exists.');
+      }
+      throw err;
+    }
 
     // Registration succeeds regardless of whether the welcome email goes
     // out — a flaky mail server should never block account creation.

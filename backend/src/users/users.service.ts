@@ -35,7 +35,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: {
-        email,
+        email: normalizeEmail(email),
       },
     });
   }
@@ -59,12 +59,13 @@ export class UsersService {
   }
 
   async create(userData: UserData): Promise<User> {
+    const email = normalizeEmail(userData.email);
     // Auto-generate username from email if not provided
-    const username = userData.username || this.generateUsername(userData.email);
-    
+    const username = userData.username || this.generateUsername(email);
+
     return this.prisma.user.create({
       data: {
-        email: userData.email,
+        email,
         passwordHash: userData.passwordHash,
         username,
       },
@@ -187,4 +188,8 @@ export class UsersService {
       creatorProfile,
     };
   }
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
 }
