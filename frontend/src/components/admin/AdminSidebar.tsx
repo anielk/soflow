@@ -51,7 +51,12 @@ export function AdminSidebar() {
                 className={active ? 'text-red-400' : 'text-text-disabled group-hover:text-text-muted'}
                 strokeWidth={active ? 2.2 : 1.8}
               />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge && (
+                <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-violet-600/15 text-violet-400 shrink-0">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}

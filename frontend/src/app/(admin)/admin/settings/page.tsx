@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import {
   Settings, Palette, Shield, Mail, HardDrive, Bot,
-  Key, ToggleLeft, Link2, Save,
+  Key, ToggleLeft, Link2,
 } from 'lucide-react';
+import { CloudivoPlannedNotice } from '@/components/admin/CloudivoPlannedNotice';
 
 type Tab =
   | 'general' | 'branding' | 'security' | 'email'
@@ -328,20 +329,15 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-text-primary">System Settings</h1>
-          <p className="text-sm text-text-muted mt-0.5">Platform-wide configuration — affects all workspaces</p>
-        </div>
-        <button
-          type="button"
-          disabled
-          className="flex items-center gap-2 px-3.5 py-2 bg-violet-600/40 text-violet-300/60 text-sm font-medium rounded-lg cursor-not-allowed"
-        >
-          <Save size={14} />
-          Save changes
-        </button>
+      <div>
+        <h1 className="text-xl font-semibold text-text-primary">System Settings</h1>
+        <p className="text-sm text-text-muted mt-0.5">Platform-wide configuration — affects all workspaces</p>
       </div>
+
+      <CloudivoPlannedNotice
+        feature="Platform-wide settings"
+        description="Instance-level configuration (branding, security policy, rate limits, webhooks, ...) is shared Cloudivo platform functionality. Every field below is a disabled placeholder — nothing here is read from or saved to a real config store."
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-px">

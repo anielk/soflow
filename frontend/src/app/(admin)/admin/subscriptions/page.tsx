@@ -1,6 +1,8 @@
 'use client';
 
 import { CreditCard, CheckCircle2 } from 'lucide-react';
+import { EmptyState } from '@/components/ui';
+import { CloudivoPlannedNotice } from '@/components/admin/CloudivoPlannedNotice';
 
 const PLANS = [
   {
@@ -37,7 +39,12 @@ export default function AdminSubscriptionsPage() {
         <p className="text-sm text-text-muted mt-0.5">Platform subscription plans and active subscriptions</p>
       </div>
 
-      {/* Plan overview */}
+      <CloudivoPlannedNotice
+        feature="Subscription management"
+        description="Billing and subscription management is shared Cloudivo platform functionality. The plan tiers below are illustrative — no plan enforcement, upgrades, or billing exist yet."
+      />
+
+      {/* Plan overview — illustrative only, not enforced anywhere */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {PLANS.map((plan) => (
           <div key={plan.name} className="bg-bg-surface border border-bg-border/60 rounded-xl p-4">
@@ -57,16 +64,15 @@ export default function AdminSubscriptionsPage() {
         ))}
       </div>
 
-      {/* Active subscriptions table */}
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl">
         <div className="border-b border-bg-border/40 px-4 py-3">
           <h2 className="text-sm font-semibold text-text-primary">Active subscriptions</h2>
         </div>
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <CreditCard size={32} className="text-text-disabled" strokeWidth={1.2} />
-          <p className="text-sm font-medium text-text-secondary">No active subscriptions</p>
-          <p className="text-xs text-text-muted">Subscriptions will appear here once billing is configured.</p>
-        </div>
+        <EmptyState
+          icon={CreditCard}
+          title="Not implemented yet"
+          description="Every workspace is on the free plan by default (Workspace.plan) — there is no billing system to change that yet."
+        />
       </div>
     </div>
   );

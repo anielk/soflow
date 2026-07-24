@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bot, CheckCircle2, AlertCircle, Clock, Database, Plug, Settings2, Layers, Cpu, FileText, Sliders, Network, Play } from 'lucide-react';
+import { Bot, AlertCircle, Clock, Database, Plug, Settings2, Layers, Cpu, FileText, Sliders, Network, Play } from 'lucide-react';
+import { CloudivoPlannedNotice } from '@/components/admin/CloudivoPlannedNotice';
 
 // UI-only descriptors — providers live in the AIProvider database table, not in this file.
 const PROVIDER_DESCRIPTORS = [
@@ -346,6 +347,11 @@ export default function AdminAIPage() {
         <h1 className="text-xl font-semibold text-text-primary">AI Administration</h1>
         <p className="text-sm text-text-muted mt-0.5">Provider configuration, model management, and AI settings</p>
       </div>
+
+      <CloudivoPlannedNotice
+        feature="AI provider administration"
+        description="AI provider/model management is shared Cloudivo platform functionality. The AIProvider/AIModel/AIConnection/AISettings tables exist in the schema, but nothing in the app reads or writes them yet — everything below is reference UI, not a live configuration surface."
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 overflow-x-auto pb-px">
