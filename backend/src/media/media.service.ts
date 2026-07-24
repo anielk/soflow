@@ -54,6 +54,19 @@ export class MediaService {
    * switching exists in the UI.
    */
   async resolveWorkspaceId(userId: string): Promise<string> {
+    return (await this.resolveMembership(userId)).workspaceId;
+  }
+
+  /**
+   * The JWT's `role` claim is the caller's GLOBAL account role (User.role,
+   * USER for everyone except a seeded SUPER_ADMIN) — NOT their role within
+   * this workspace (WorkspaceMember.role). assertCanManage must check the
+   * real membership role, not whatever the controller passed through from
+   * the JWT, or a workspace's own OWNER can never manage anyone else's
+   * files (same class of bug fixed in WorkspaceService during the Beta
+   * stabilization sprint).
+   */
+  async resolveMembership(userId: string): Promise<{ workspaceId: string; role: Role }> {
     const membership = await this.prisma.workspaceMember.findFirst({
       where: { userId },
       orderBy: { joinedAt: 'asc' },
@@ -61,7 +74,7 @@ export class MediaService {
     if (!membership) {
       throw new ForbiddenException('You are not a member of any workspace.');
     }
-    return membership.workspaceId;
+    return { workspaceId: membership.workspaceId, role: membership.role };
   }
 
   async upload(file: Express.Multer.File, userId: string): Promise<MediaResponse> {
@@ -217,8 +230,9 @@ export class MediaService {
     return { stream, media };
   }
 
-  async rename(userId: string, role: Role, id: string, dto: RenameMediaDto): Promise<MediaResponse> {
+  async rename(userId: string, id: string, dto: RenameMediaDto): Promise<MediaResponse> {
     const media = await this.getOwnedOrThrow(userId, id);
+    const { role } = await this.resolveMembership(userId);
     this.assertCanManage(userId, role, media);
     const updated = await this.prisma.media.update({
       where: { id },
@@ -228,8 +242,9 @@ export class MediaService {
     return this.toResponse(updated);
   }
 
-  async remove(userId: string, role: Role, id: string): Promise<void> {
+  async remove(userId: string, id: string): Promise<void> {
     const media = await this.getOwnedOrThrow(userId, id);
+    const { role } = await this.resolveMembership(userId);
     this.assertCanManage(userId, role, media);
 
     await this.storageService.delete(media.storagePath).catch(() => undefined);

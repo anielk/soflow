@@ -87,7 +87,7 @@ export function apiDelete<T>(path: string): Promise<T> {
 }
 
 // Authentication functions
-export async function registerUser(userData: { email: string; password: string; username?: string }) {
+export async function registerUser(userData: { email: string; password: string; username: string }) {
   return apiPost<{ access_token: string }>('/auth/register', userData);
 }
 

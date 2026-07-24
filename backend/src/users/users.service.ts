@@ -4,6 +4,8 @@ import { User, CreatorProfile } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
+import { UserSummaryDto, toUserSummary } from './dto/user-summary.dto';
+import { ProfileResponseDto, toProfileResponse } from './dto/profile-response.dto';
 
 interface UserData {
   email: string;
@@ -28,8 +30,10 @@ export class UsersService {
     private readonly systemEvents: SystemEventsService,
   ) {}
 
-  async findAll(): Promise<User[]> {
-    return this.prisma.user.findMany();
+  /** Platform-admin listing — deliberately returns UserSummaryDto, never the raw Prisma row (no passwordHash/resetTokenHash). */
+  async findAll(): Promise<UserSummaryDto[]> {
+    const users = await this.prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+    return users.map(toUserSummary);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -81,7 +85,7 @@ export class UsersService {
     return `${clean}${suffix}`;
   }
 
-  async getProfile(userId: string): Promise<any> {
+  async getProfile(userId: string): Promise<ProfileResponseDto | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -93,10 +97,7 @@ export class UsersService {
       return null;
     }
 
-    return {
-      ...user,
-      creatorProfile: user.creatorProfile || null,
-    };
+    return toProfileResponse(user);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
@@ -132,7 +133,7 @@ export class UsersService {
     return true;
   }
 
-  async updateProfile(userId: string, profileData: UpdateProfileDto): Promise<any> {
+  async updateProfile(userId: string, profileData: UpdateProfileDto): Promise<ProfileResponseDto> {
     // Update user-level fields if provided
     const userUpdateFields: any = {};
     if (profileData.username !== undefined) userUpdateFields.username = profileData.username;
@@ -176,17 +177,14 @@ export class UsersService {
     }
 
     // Return updated user with profile
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: {
         creatorProfile: true,
       },
     });
 
-    return {
-      ...user,
-      creatorProfile,
-    };
+    return toProfileResponse(user);
   }
 }
 

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Mail, Lock, User } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { registerUser } from '@/lib/api';
+import { setAuthToken } from '@/lib/auth';
 import { LogoIcon } from '@/components/brand/Logo';
 
 export default function RegisterPage() {
@@ -22,10 +23,15 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      await registerUser({ email, password, username });
-      router.push('/login');
-    } catch {
-      setError('Registration failed. Please try again.');
+      const response = await registerUser({ email, password, username });
+      if (response?.access_token) {
+        setAuthToken(response.access_token);
+        router.push('/dashboard');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

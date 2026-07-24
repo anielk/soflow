@@ -64,12 +64,12 @@ export class MediaController {
 
   @Patch(':id')
   rename(@Param('id') id: string, @Body() dto: RenameMediaDto, @Req() req: any) {
-    return this.mediaService.rename(req.user.userId, req.user.role, id, dto);
+    return this.mediaService.rename(req.user.userId, id, dto);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: any) {
-    await this.mediaService.remove(req.user.userId, req.user.role, id);
+    await this.mediaService.remove(req.user.userId, id);
     return { success: true };
   }
 }

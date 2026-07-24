@@ -60,6 +60,22 @@ export class WorkspaceService {
    * the UI yet).
    */
   async resolveWorkspaceId(userId: string): Promise<string> {
+    return (await this.resolveMembership(userId)).workspaceId;
+  }
+
+  /**
+   * The JWT's `role` claim is the user's GLOBAL account role (User.role,
+   * defaults to USER for everyone except a seeded SUPER_ADMIN) — it is NOT
+   * their role *within this workspace* (WorkspaceMember.role, which is what
+   * OWNER/MANAGER actually means here). Every manage-permission check in
+   * this service must resolve the real membership row and check that role,
+   * not whatever role the controller happened to pass through from the JWT
+   * — otherwise a workspace's own OWNER can never manage it (found and
+   * fixed during the Beta stabilization sprint: registration now creates an
+   * OWNER membership, but addMember/update/uploadLogo were still checking
+   * the caller's global role, which is USER, and rejecting them).
+   */
+  async resolveMembership(userId: string): Promise<{ workspaceId: string; role: Role }> {
     const membership = await this.prisma.workspaceMember.findFirst({
       where: { userId },
       orderBy: { joinedAt: 'asc' },
@@ -67,7 +83,7 @@ export class WorkspaceService {
     if (!membership) {
       throw new ForbiddenException('You are not a member of any workspace.');
     }
-    return membership.workspaceId;
+    return { workspaceId: membership.workspaceId, role: membership.role };
   }
 
   private assertCanManage(role: Role): void {
@@ -82,9 +98,9 @@ export class WorkspaceService {
     return this.toResponse(workspace);
   }
 
-  async update(userId: string, role: Role, dto: UpdateWorkspaceDto): Promise<WorkspaceResponse> {
+  async update(userId: string, dto: UpdateWorkspaceDto): Promise<WorkspaceResponse> {
+    const { workspaceId, role } = await this.resolveMembership(userId);
     this.assertCanManage(role);
-    const workspaceId = await this.resolveWorkspaceId(userId);
     const workspace = await this.prisma.workspace.update({ where: { id: workspaceId }, data: dto });
 
     const actorName = await this.getActorDisplayName(userId);
@@ -102,7 +118,8 @@ export class WorkspaceService {
     return this.toResponse(workspace);
   }
 
-  async uploadLogo(userId: string, role: Role, file: Express.Multer.File): Promise<WorkspaceResponse> {
+  async uploadLogo(userId: string, file: Express.Multer.File): Promise<WorkspaceResponse> {
+    const { role } = await this.resolveMembership(userId);
     this.assertCanManage(role);
     try {
       return await this.processLogoUpload(userId, file);
@@ -192,9 +209,9 @@ export class WorkspaceService {
     };
   }
 
-  async addMember(userId: string, role: Role, dto: AddMemberDto) {
+  async addMember(userId: string, dto: AddMemberDto) {
+    const { workspaceId, role } = await this.resolveMembership(userId);
     this.assertCanManage(role);
-    const workspaceId = await this.resolveWorkspaceId(userId);
 
     let user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     let temporaryPassword: string | null = null;

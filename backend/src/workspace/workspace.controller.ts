@@ -26,7 +26,7 @@ export class WorkspaceController {
 
   @Patch()
   update(@Body() dto: UpdateWorkspaceDto, @Req() req: any) {
-    return this.workspaceService.update(req.user.userId, req.user.role, dto);
+    return this.workspaceService.update(req.user.userId, dto);
   }
 
   // Single source of truth for the option lists Settings > Localization
@@ -50,7 +50,7 @@ export class WorkspaceController {
   @Post('logo')
   @UseInterceptors(FileInterceptor('file'))
   uploadLogo(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
-    return this.workspaceService.uploadLogo(req.user.userId, req.user.role, file);
+    return this.workspaceService.uploadLogo(req.user.userId, file);
   }
 
   @Get('logo')
@@ -67,7 +67,7 @@ export class WorkspaceController {
 
   @Post('members')
   addMember(@Body() dto: AddMemberDto, @Req() req: any) {
-    return this.workspaceService.addMember(req.user.userId, req.user.role, dto);
+    return this.workspaceService.addMember(req.user.userId, dto);
   }
 
   @Get('creators')

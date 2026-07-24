@@ -1,14 +1,22 @@
 import { Controller, Get, Post, Put, Body, UseGuards, Req } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { User } from '@prisma/client';
+import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
+import { UserSummaryDto } from './dto/user-summary.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  // Platform-wide user list — was previously unauthenticated and returned
+  // raw Prisma rows (passwordHash, resetTokenHash included). Now requires a
+  // valid JWT plus SUPER_ADMIN, and only ever returns UserSummaryDto.
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
   @Get()
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<UserSummaryDto[]> {
     return this.usersService.findAll();
   }
 

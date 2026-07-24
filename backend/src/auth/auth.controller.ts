@@ -4,6 +4,7 @@ import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
@@ -25,8 +26,8 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto.email, registerDto.password);
+  async register(@Body() registerDto: RegisterDto): Promise<RegisterResponseDto> {
+    return this.authService.register(registerDto);
   }
 
   @Post('forgot-password')

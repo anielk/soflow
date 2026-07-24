@@ -12,10 +12,12 @@ import { AuditCategory } from '@prisma/client';
  * them doesn't exist in the app yet. See Sprint 5D's "Known limitations".
  */
 export const EVENT_TYPES = {
+  WORKSPACE_CREATED: 'workspace.created',
   WORKSPACE_UPDATED: 'workspace.updated',
   WORKSPACE_LOGO_CHANGED: 'workspace.logo_changed',
   SETTINGS_CHANGED: 'settings.changed',
 
+  USER_REGISTERED: 'user.registered',
   USER_INVITED: 'user.invited',
   USER_REMOVED: 'user.removed',
   ROLE_CHANGED: 'role.changed',
@@ -41,10 +43,12 @@ export const EVENT_TYPES = {
 export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES];
 
 export const EVENT_CATEGORIES: Record<EventType, AuditCategory> = {
+  [EVENT_TYPES.WORKSPACE_CREATED]: AuditCategory.WORKSPACE,
   [EVENT_TYPES.WORKSPACE_UPDATED]: AuditCategory.WORKSPACE,
   [EVENT_TYPES.WORKSPACE_LOGO_CHANGED]: AuditCategory.WORKSPACE,
   [EVENT_TYPES.SETTINGS_CHANGED]: AuditCategory.SETTINGS,
 
+  [EVENT_TYPES.USER_REGISTERED]: AuditCategory.AUTH,
   [EVENT_TYPES.USER_INVITED]: AuditCategory.USER,
   [EVENT_TYPES.USER_REMOVED]: AuditCategory.USER,
   [EVENT_TYPES.ROLE_CHANGED]: AuditCategory.USER,

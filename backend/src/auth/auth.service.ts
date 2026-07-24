@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException, Injectable, Logger } from '@nes
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { Prisma, User } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, Role, User, Workspace } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import { NotificationService } from '../notification/notification.service';
@@ -10,6 +11,8 @@ import { welcomeTemplate } from '../notification/templates/welcome.template';
 import { passwordResetTemplate } from '../notification/templates/password-reset.template';
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
+import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 
 const RESET_TOKEN_TTL_MINUTES = 15;
 
@@ -24,11 +27,16 @@ export class AuthService {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
     private readonly systemEvents: SystemEventsService,
   ) {}
+
+  private signToken(user: Pick<User, 'id' | 'email' | 'role'>): string {
+    return this.jwtService.sign({ email: user.email, sub: user.id, role: user.role });
+  }
 
   async validateUser(email: string, password: string, ipAddress?: string, userAgent?: string): Promise<any> {
     const user = await this.usersService.findByEmail(email);
@@ -55,7 +63,6 @@ export class AuthService {
   }
 
   async login(user: User, ipAddress?: string, userAgent?: string) {
-    const payload = { email: user.email, sub: user.id, role: user.role };
     const actorName = user.name || user.email;
     this.systemEvents.publish({
       type: EVENT_TYPES.AUTH_LOGIN,
@@ -68,7 +75,7 @@ export class AuthService {
       message: `${actorName} logged in`,
     });
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.signToken(user),
     };
   }
 
@@ -89,17 +96,71 @@ export class AuthService {
     });
   }
 
-  async register(email: string, password: string) {
-    const hashedPassword = await bcrypt.hash(password, 10);
+  /**
+   * Registration is a "create your agency" flow, not a bare account signup:
+   * every new user must land with a workspace of their own and OWNER
+   * membership in it — otherwise every workspace-scoped endpoint
+   * (dashboard, members, creators, media, ...) 403s with "not a member of
+   * any workspace" the moment they log in. User + Workspace +
+   * WorkspaceMember are created in one transaction so a failure partway
+   * through can never leave a user without a workspace, or a workspace
+   * without an owner.
+   */
+  async register(dto: RegisterDto): Promise<RegisterResponseDto> {
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
     let user: User;
+    let workspace: Workspace;
     try {
-      user = await this.usersService.create({ email, passwordHash: hashedPassword });
+      const created = await this.prisma.$transaction(async (tx) => {
+        const username = await this.uniqueUsername(tx, dto.username);
+        const txUser = await tx.user.create({
+          data: {
+            email: dto.email.trim().toLowerCase(),
+            passwordHash: hashedPassword,
+            username,
+          },
+        });
+
+        const slug = await this.uniqueWorkspaceSlug(tx, dto.username);
+        const txWorkspace = await tx.workspace.create({
+          data: { name: dto.username.trim(), slug },
+        });
+
+        await tx.workspaceMember.create({
+          data: { workspaceId: txWorkspace.id, userId: txUser.id, role: Role.OWNER },
+        });
+
+        return { user: txUser, workspace: txWorkspace };
+      });
+      user = created.user;
+      workspace = created.workspace;
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('An account with that email already exists.');
       }
       throw err;
     }
+
+    const actorName = user.name || user.username;
+    this.systemEvents.publish({
+      type: EVENT_TYPES.USER_REGISTERED,
+      userId: user.id,
+      workspaceId: workspace.id,
+      actorName,
+      targetType: 'User',
+      targetId: user.id,
+      message: `${actorName} created an account`,
+    });
+    this.systemEvents.publish({
+      type: EVENT_TYPES.WORKSPACE_CREATED,
+      userId: user.id,
+      workspaceId: workspace.id,
+      actorName,
+      targetType: 'Workspace',
+      targetId: workspace.id,
+      message: `${actorName} created workspace "${workspace.name}"`,
+    });
 
     // Registration succeeds regardless of whether the welcome email goes
     // out — a flaky mail server should never block account creation.
@@ -110,7 +171,29 @@ export class AuthService {
       })
       .catch((err) => this.logger.warn(`Welcome email failed for ${user.email}: ${errorMessage(err)}`));
 
-    return user;
+    return { access_token: this.signToken(user) };
+  }
+
+  private async uniqueUsername(tx: Prisma.TransactionClient, seed: string): Promise<string> {
+    const base = seed.trim().toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20) || 'user';
+    let candidate = base;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const existing = await tx.user.findUnique({ where: { username: candidate } });
+      if (!existing) return candidate;
+      candidate = `${base}${randomBytes(3).toString('hex')}`;
+    }
+    throw new ConflictException('Could not generate a unique username — please try a different one.');
+  }
+
+  private async uniqueWorkspaceSlug(tx: Prisma.TransactionClient, seed: string): Promise<string> {
+    const base = seed.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40) || 'workspace';
+    let candidate = base;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const existing = await tx.workspace.findUnique({ where: { slug: candidate } });
+      if (!existing) return candidate;
+      candidate = `${base}-${randomBytes(2).toString('hex')}`;
+    }
+    throw new ConflictException('Could not generate a unique workspace name — please try a different one.');
   }
 
   /** Always succeeds from the caller's perspective — never reveals whether the email exists. */
