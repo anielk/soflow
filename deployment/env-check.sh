@@ -57,7 +57,7 @@ check_resources || FAILED=1
 load_env
 
 # Required by backend/src/config/env.validation.ts (Joi .required()) plus
-# the root-level vars docker-compose.yml interpolates — kept in sync with
+# the root-level vars compose.yml interpolates — kept in sync with
 # those two sources, not duplicated logic.
 REQUIRED_VARS=(JWT_SECRET DATABASE_URL REDIS_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD)
 RECOMMENDED_VARS=(MEDIA_STORAGE_DRIVER MEDIA_STORAGE_PATH MEDIA_MAX_FILE_SIZE_MB NEXT_PUBLIC_API_URL)

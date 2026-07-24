@@ -18,6 +18,15 @@ DEPLOYMENT_DIR="$(cd "${LIB_DIR}/.." && pwd)"
 PROJECT_ROOT="$(cd "${DEPLOYMENT_DIR}/.." && pwd)"
 export LIB_DIR DEPLOYMENT_DIR PROJECT_ROOT
 
+# RESOURCE_PREFIX — the prefix every Docker resource name (containers,
+# network, volumes) uses; must match compose.yml's `${PROJECT_NAME:-creator}`
+# exactly. Read directly from root .env here (rather than via load_env,
+# which runs later in most scripts) so it's available to every script from
+# the start, including create_folders/check_ports which run before load_env.
+PROJECT_NAME="$(grep -m1 '^PROJECT_NAME=' "${PROJECT_ROOT}/.env" 2>/dev/null | cut -d= -f2-)"
+RESOURCE_PREFIX="${PROJECT_NAME:-creator}"
+export PROJECT_NAME RESOURCE_PREFIX
+
 # ── Output ───────────────────────────────────────────────────────────────
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -84,10 +93,14 @@ parse_common_flags() {
 
 # ── Deployment environment ───────────────────────────────────────────────
 #
-# development -> docker-compose.yml only (hot-reload, published dev ports)
-# demo / production -> docker-compose.yml + docker-compose.prod.yml (built
-#   images, nginx, no published app ports). Nothing here is hardcoded to a
-#   specific host/port — those come from .env.
+# development -> compose.yml + compose.dev.yml (hot-reload, bind mounts,
+#   published dev ports)
+# demo        -> compose.yml + compose.demo.yml (production build, nginx,
+#   no published app ports)
+# production  -> compose.yml + compose.prod.yml (identical build/runtime
+#   config to demo — see docs/deployment/Architecture.md — only the
+#   per-host .env / .env.production content differs)
+# Nothing here is hardcoded to a specific host/port — those come from .env.
 
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 BACKUP_DIR="${BACKUP_DIR:-${PROJECT_ROOT}/backups}"
@@ -107,7 +120,7 @@ validate_deploy_env() {
 
 # Compose interpolation (${POSTGRES_DB} etc. in the yaml) reads root .env;
 # the backend/frontend containers' actual runtime env comes from .env.production
-# via `env_file:` in docker-compose.yml (see docker-compose.yml's backend
+# via `env_file:` in compose.yml (see compose.yml's backend
 # service — this is an existing project convention, not something these
 # scripts introduce). Source both so validation reflects what the
 # containers really get, .env.production taking precedence since that's
@@ -130,8 +143,9 @@ load_env() {
 # compose_files — echoes the -f flags for the resolved DEPLOY_ENV.
 compose_files() {
   case "${DEPLOY_ENV}" in
-    development) echo "-f ${PROJECT_ROOT}/docker-compose.yml" ;;
-    demo|production) echo "-f ${PROJECT_ROOT}/docker-compose.yml -f ${PROJECT_ROOT}/docker-compose.prod.yml" ;;
+    development) echo "-f ${PROJECT_ROOT}/compose.yml -f ${PROJECT_ROOT}/compose.dev.yml" ;;
+    demo) echo "-f ${PROJECT_ROOT}/compose.yml -f ${PROJECT_ROOT}/compose.demo.yml" ;;
+    production) echo "-f ${PROJECT_ROOT}/compose.yml -f ${PROJECT_ROOT}/compose.prod.yml" ;;
   esac
 }
 
@@ -296,7 +310,7 @@ port_in_use() {
 # expected (idempotent re-run) rather than a conflict.
 check_ports() {
   local already_installed=0
-  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q '^creator-'; then
+  if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${RESOURCE_PREFIX}-"; then
     already_installed=1
   fi
 
@@ -410,7 +424,7 @@ fill_blank_secret() {
 # <target_dir>/.env.production from .env.production.example if missing,
 # generating JWT_SECRET/SESSION_SECRET when left blank. Both .env (compose
 # variable interpolation) and .env.production (what the backend/frontend
-# containers actually load via `env_file:` in docker-compose.yml) are
+# containers actually load via `env_file:` in compose.yml) are
 # created from the same template — see docs/Deployment.md's environment
 # variables section for why there are two.
 ensure_env_files() {

@@ -45,7 +45,7 @@ creator-platform/
 ## 5) Setup
 1. Clone the repository
 2. Run `./setup-server.sh` to configure the server
-3. Run `docker-compose up` to start all services
+3. Run `docker compose -f compose.yml -f compose.dev.yml up -d` to start all services (see [docs/deployment/](docs/deployment/) for demo/production)
 
 ## 6) Development
 - Frontend: `cd frontend && npm run dev`

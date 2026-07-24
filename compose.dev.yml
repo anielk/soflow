@@ -1,0 +1,62 @@
+# Development overlay — hot reload, bind mounts, dev servers.
+#
+#   docker compose -f compose.yml -f compose.dev.yml up -d
+#
+# Only overrides command / build target / volumes / environment / ports on
+# top of compose.yml — no configuration is duplicated from the base file.
+services:
+  frontend:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+      # Relative URL so browser requests go through Next.js rewrites to the
+      # backend container instead of needing a publicly reachable API host.
+      NEXT_PUBLIC_API_URL: /v1
+      BACKEND_PROXY_URL: http://backend:4000
+    ports:
+      - "${FRONTEND_PORT}:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/next.config.mjs:/app/next.config.mjs
+      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
+      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
+
+  backend:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    ports:
+      - "${BACKEND_PORT}:4000"
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/prisma:/app/prisma
+      - ./backend/.env.production:/app/.env.production
+      - ./backend/package.json:/app/package.json
+    depends_on:
+      mailhog:
+        condition: service_started
+
+  postgres:
+    ports:
+      - "${POSTGRES_PORT}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_PORT}:6379"
+
+  # Dev-only SMTP catcher — lets the real SmtpProvider send real SMTP
+  # traffic somewhere during local development/testing without needing real
+  # mail credentials. Not part of the Leinaflow application; demo/production
+  # point SMTP_HOST at the real Cloudivo mail service via env vars instead,
+  # so this service doesn't exist outside of compose.dev.yml.
+  mailhog:
+    container_name: ${PROJECT_NAME:-creator}-mailhog
+    image: mailhog/mailhog:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks:
+      - creator-network

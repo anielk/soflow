@@ -42,7 +42,7 @@ log_step "Leinaflow uninstall (env: ${DEPLOY_ENV})"
 if [[ "${DRY_RUN}" -eq 1 ]]; then
   echo "Would run: ${COMPOSE} $(compose_files) down"
   if [[ "${REMOVE_VOLUMES}" -eq 1 ]]; then
-    echo "Would also remove volumes: creator-postgres-data, creator-redis-data, creator-media-storage"
+    echo "Would also remove volumes: ${RESOURCE_PREFIX}-postgres-data, ${RESOURCE_PREFIX}-redis-data, ${RESOURCE_PREFIX}-media-storage"
   else
     echo "Volumes would be KEPT (pass --remove-volumes to remove them)."
   fi
@@ -62,7 +62,7 @@ log_ok "Containers stopped and removed."
 
 if [[ "${REMOVE_VOLUMES}" -eq 1 ]]; then
   if confirm_typed "This permanently deletes the database, cache and all media files." "delete"; then
-    for vol in creator-postgres-data creator-redis-data creator-media-storage; do
+    for vol in "${RESOURCE_PREFIX}-postgres-data" "${RESOURCE_PREFIX}-redis-data" "${RESOURCE_PREFIX}-media-storage"; do
       if docker volume inspect "${vol}" >/dev/null 2>&1; then
         docker volume rm "${vol}" >/dev/null
         log_ok "Removed volume: ${vol}"

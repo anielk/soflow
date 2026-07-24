@@ -38,16 +38,16 @@ else
 fi
 
 # ── Media storage ────────────────────────────────────────────────────────
-if docker volume inspect creator-media-storage >/dev/null 2>&1; then
+if docker volume inspect "${RESOURCE_PREFIX}-media-storage" >/dev/null 2>&1; then
   log_info "Archiving media storage volume..."
   docker run --rm \
-    -v creator-media-storage:/data:ro \
+    -v "${RESOURCE_PREFIX}-media-storage:/data:ro" \
     -v "${TARGET_DIR}:/backup" \
     alpine:3 \
     tar czf /backup/media.tar.gz -C /data .
   log_ok "Media archived: ${TARGET_DIR}/media.tar.gz ($(du -h "${TARGET_DIR}/media.tar.gz" | cut -f1))"
 else
-  log_warn "creator-media-storage volume does not exist — skipping media backup."
+  log_warn "${RESOURCE_PREFIX}-media-storage volume does not exist — skipping media backup."
 fi
 
 # ── Environment ──────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ log_ok "Environment files copied."
 # ── Configuration ────────────────────────────────────────────────────────
 log_info "Copying deployment configuration..."
 mkdir -p "${TARGET_DIR}/config"
-for item in docker-compose.yml docker-compose.prod.yml docker nginx; do
+for item in compose.yml compose.dev.yml compose.demo.yml compose.prod.yml docker nginx; do
   [[ -e "${PROJECT_ROOT}/${item}" ]] && cp -r "${PROJECT_ROOT}/${item}" "${TARGET_DIR}/config/"
 done
 log_ok "Configuration copied."

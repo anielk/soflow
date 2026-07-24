@@ -9,8 +9,10 @@
 #   deployment/install.sh [--env development|demo|production] [-y|--yes] [--seed|--no-seed]
 #
 # Flags:
-#   --env <env>   Target environment (default: production). development uses
-#                 docker-compose.yml only; demo/production add the prod overlay.
+#   --env <env>   Target environment (default: production). Each environment
+#                 layers compose.yml with its own overlay: compose.dev.yml,
+#                 compose.demo.yml, or compose.prod.yml (demo/production are
+#                 functionally identical — see docs/deployment/Architecture.md).
 #   -y, --yes     Non-interactive: accept all prompts (for CPOS/scripted runs).
 #   --seed        Force-run the database seed even on production.
 #   --no-seed     Skip seeding even on development/demo.
@@ -52,11 +54,11 @@ create_folders() {
   mkdir -p "${BACKUP_DIR}"
   log_ok "Backup directory ready: ${BACKUP_DIR}"
 
-  if docker volume inspect creator-media-storage >/dev/null 2>&1; then
-    log_ok "Media volume already exists: creator-media-storage"
+  if docker volume inspect "${RESOURCE_PREFIX}-media-storage" >/dev/null 2>&1; then
+    log_ok "Media volume already exists: ${RESOURCE_PREFIX}-media-storage"
   else
-    docker volume create creator-media-storage >/dev/null
-    log_ok "Media volume created: creator-media-storage"
+    docker volume create "${RESOURCE_PREFIX}-media-storage" >/dev/null
+    log_ok "Media volume created: ${RESOURCE_PREFIX}-media-storage"
   fi
 }
 

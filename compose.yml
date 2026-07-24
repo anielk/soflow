@@ -1,46 +1,35 @@
 services:
   frontend:
-    container_name: creator-frontend
+    container_name: ${PROJECT_NAME:-creator}-frontend
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
-      target: development
     restart: unless-stopped
     env_file:
       - .env.production
-
-    environment:
-      NODE_ENV: development
-     # Use relative URL so browser requests go through Next.js rewrites to backend container
-      NEXT_PUBLIC_API_URL: /v1
-      BACKEND_PROXY_URL: http://backend:4000
-    ports:
-      - "${FRONTEND_PORT}:3000"
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/next.config.ts:/app/next.config.ts
-      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
-      - ./frontend/postcss.config.mjs:/app/postcss.config.mjs
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     networks:
       - creator-network
     security_opt:
       - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', r => process.exit(r.statusCode < 400 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   backend:
-    container_name: creator-backend
+    container_name: ${PROJECT_NAME:-creator}-backend
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
-      target: development
     restart: unless-stopped
     env_file:
       - .env.production
     environment:
-      NODE_ENV: ${NODE_ENV}
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       PORT: ${BACKEND_PORT}
@@ -58,37 +47,49 @@ services:
       SMTP_FROM_NAME: ${SMTP_FROM_NAME}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
       SMTP_REPLY_TO: ${SMTP_REPLY_TO}
-    ports:
-      - "${BACKEND_PORT}:4000"
     volumes:
-      - ./backend/src:/app/src
-      - ./backend/prisma:/app/prisma
-      - ./backend/.env.production:/app/.env.production
-      - ./backend/package.json:/app/package.json
       - media_storage:${MEDIA_STORAGE_PATH}
+      # Long-form tmpfs (not the short `tmpfs:` key) so we can set a
+      # world-writable mode — Docker's tmpfs default is root:root 0755,
+      # which the non-root user in compose.demo.yml/compose.prod.yml
+      # (uid 1000) can't write into otherwise.
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 0o1777
+      - type: tmpfs
+        target: /app/node_modules/.cache
+        tmpfs:
+          mode: 0o1777
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      mailhog:
-        condition: service_started
     networks:
       - creator-network
     security_opt:
       - no-new-privileges:true
-    tmpfs:
-      - /tmp
-      - /app/node_modules/.cache
     ulimits:
       nproc: 65535
       nofile:
         soft: 2048
         hard: 4096
-    command: npm run start:dev
+    healthcheck:
+      # Liveness only: any response means the Nest process is up and
+      # listening. /v1/health's body reports 503 when an optional
+      # dependency (e.g. the SMTP relay) is unreachable — that's real,
+      # actionable information for monitoring, but frontend/nginx's startup
+      # order shouldn't be gated on it, or a notification-provider outage
+      # would block the whole stack from starting.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/v1/health', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   postgres:
-    container_name: creator-postgres
+    container_name: ${PROJECT_NAME:-creator}-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     env_file:
@@ -97,8 +98,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -109,26 +108,11 @@ services:
     networks:
       - creator-network
 
-  # Dev-only SMTP catcher — lets the real SmtpProvider send real SMTP
-  # traffic somewhere during local development/testing without needing real
-  # mail credentials. Not part of the Leinaflow application; production
-  # points SMTP_HOST at the real Cloudivo mail service via env vars only.
-  mailhog:
-    container_name: creator-mailhog
-    image: mailhog/mailhog:v1.0.1
-    restart: unless-stopped
-    ports:
-      - "8025:8025"
-    networks:
-      - creator-network
-
   redis:
-    container_name: creator-redis
+    container_name: ${PROJECT_NAME:-creator}-redis
     image: redis:7-alpine
     restart: unless-stopped
     command: redis-server --appendonly yes
-    ports:
-      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -141,15 +125,16 @@ services:
 
 networks:
   creator-network:
-    name: creator-network
+    # The `name:` below is the actual Docker resource name (parameterized
+    # for multi-product reuse); the `creator-network` YAML key above is
+    # just this file's internal alias and doesn't need to change.
+    name: ${PROJECT_NAME:-creator}-network
     driver: bridge
 
 volumes:
   postgres_data:
-    name: creator-postgres-data
+    name: ${PROJECT_NAME:-creator}-postgres-data
   redis_data:
-    name: creator-redis-data
-  frontend_node_modules:
-    name: creator-frontend-node-modules
+    name: ${PROJECT_NAME:-creator}-redis-data
   media_storage:
-    name: creator-media-storage
+    name: ${PROJECT_NAME:-creator}-media-storage

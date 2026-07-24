@@ -117,9 +117,11 @@ prompts) lives in `deployment/lib/common.sh`, sourced by every script above
 
 | Environment | Compose files | Notes |
 |---|---|---|
-| `development` | `docker-compose.yml` | Hot-reload, ports published directly (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from `.env`). Seeded by default. |
-| `demo` | `docker-compose.yml` + `docker-compose.prod.yml` | Built images, nginx in front, only `80`/`443` exposed. Seeded by default. |
-| `production` | `docker-compose.yml` + `docker-compose.prod.yml` | Same as demo, but **seeding is skipped by default** (the seed creates known demo credentials — pass `--seed` to `install.sh` to force it). |
+| `development` | `compose.yml` + `compose.dev.yml` | Hot-reload, bind mounts, ports published directly (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from `.env`). Seeded by default. |
+| `demo` | `compose.yml` + `compose.demo.yml` | Built images, nginx in front, only `80`/`443` exposed. Seeded by default. |
+| `production` | `compose.yml` + `compose.prod.yml` | Functionally identical to demo (see [docs/deployment/Architecture.md](deployment/Architecture.md)), but **seeding is skipped by default** (the seed creates known demo credentials — pass `--seed` to `install.sh` to force it). |
+
+See [docs/deployment/](deployment/) for the full per-environment guides (Development, Demo, Production, Rollback, Architecture).
 
 ## Environment variables
 
@@ -178,7 +180,7 @@ backups/
     db.sql
     media.tar.gz
     env/{.env,.env.production}
-    config/{docker-compose.yml,docker-compose.prod.yml,docker/,nginx/}
+    config/{compose.yml,compose.dev.yml,compose.demo.yml,compose.prod.yml,docker/,nginx/}
     manifest.txt
 ```
 

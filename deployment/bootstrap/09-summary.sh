@@ -36,7 +36,7 @@ cat <<SUMMARY
   Backend API:    ${backend_url}
   Database:       postgres://${POSTGRES_USER:-creator_admin}@postgres:5432/${POSTGRES_DB:-creator_platform}
   Redis:          redis://redis:6379
-  Media storage:  ${MEDIA_STORAGE_PATH:-/data/media} (volume: creator-media-storage)
+  Media storage:  ${MEDIA_STORAGE_PATH:-/data/media} (volume: ${RESOURCE_PREFIX}-media-storage)
   Docker:         ${docker_version}
   Project:        v${project_version} (${git_commit})
   Install dir:    ${INSTALL_DIR}

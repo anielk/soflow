@@ -112,9 +112,9 @@ fi
 
 if [[ -f "${MEDIA_ARCHIVE}" ]]; then
   log_step "3. Restoring media storage"
-  docker volume inspect creator-media-storage >/dev/null 2>&1 || docker volume create creator-media-storage >/dev/null
+  docker volume inspect "${RESOURCE_PREFIX}-media-storage" >/dev/null 2>&1 || docker volume create "${RESOURCE_PREFIX}-media-storage" >/dev/null
   docker run --rm \
-    -v creator-media-storage:/data \
+    -v "${RESOURCE_PREFIX}-media-storage:/data" \
     -v "${BACKUP_CHOICE}:/backup:ro" \
     alpine:3 \
     sh -c "rm -rf /data/* /data/.[!.]* 2>/dev/null; tar xzf /backup/media.tar.gz -C /data"

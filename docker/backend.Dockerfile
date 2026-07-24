@@ -2,7 +2,7 @@ FROM node:22-bookworm-slim AS base
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y openssl ca-certificates ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY backend/package*.json ./
-RUN npm install
+RUN npm ci
 
 FROM base AS development
 ENV NODE_ENV=development

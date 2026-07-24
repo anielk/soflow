@@ -64,11 +64,11 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
   log_step "Leinaflow bootstrap — dry run (env: ${DEPLOY_ENV})"
   echo "INSTALL_DIR:      ${INSTALL_DIR}"
   echo "PROJECT_REPO_URL: ${PROJECT_REPO_URL}"
-  if [[ "${DEPLOY_ENV}" == "development" ]]; then
-    echo "Compose files:    -f ${INSTALL_DIR}/docker-compose.yml"
-  else
-    echo "Compose files:    -f ${INSTALL_DIR}/docker-compose.yml -f ${INSTALL_DIR}/docker-compose.prod.yml"
-  fi
+  case "${DEPLOY_ENV}" in
+    development) echo "Compose files:    -f ${INSTALL_DIR}/compose.yml -f ${INSTALL_DIR}/compose.dev.yml" ;;
+    demo)        echo "Compose files:    -f ${INSTALL_DIR}/compose.yml -f ${INSTALL_DIR}/compose.demo.yml" ;;
+    production)  echo "Compose files:    -f ${INSTALL_DIR}/compose.yml -f ${INSTALL_DIR}/compose.prod.yml" ;;
+  esac
   echo
   echo "Steps that would run, in order:"
   for step in "${STEPS[@]}"; do
