@@ -39,7 +39,7 @@ const MOCK_QUEUE: Post[] = [
 type SortField = 'scheduledAt' | 'title' | 'type';
 type SortDir   = 'asc' | 'desc';
 
-const MEDIA_COLOR: Record<MediaType, string> = { video: '#7C3AED', image: '#3B82F6' };
+const MEDIA_COLOR: Record<MediaType, string> = { video: '#7C3AED', image: '#3B82F6', document: '#F59E0B' };
 
 function PostTypeBadge({ type, price }: { type: PostType; price?: number }) {
   if (type === 'ppv' && price != null) {

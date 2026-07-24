@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Button, Modal, Input, EmptyState, Skeleton, Tooltip, useToast } from '@/components/ui';
+import { Badge, Button, Modal, Input, EmptyState, Skeleton, Tooltip, useToast } from '@/components/ui';
 import { UserPlus, Search, UsersRound, SearchX, Mail, HelpCircle } from 'lucide-react';
 import { listCreators, addCreator } from '@/lib/workspace';
+import { CreatorAvatar } from '@/components/creators/CreatorAvatar';
 import type { CreatorRecord } from '@/types/workspace';
 
 export default function CreatorsPage() {
@@ -185,10 +186,21 @@ export default function CreatorsPage() {
         ) : (
           <ul className="divide-y divide-bg-border/40">
             {filtered.map((creator) => (
-              <li key={creator.id} className="flex items-center gap-3 px-4 py-3.5">
-                <Avatar name={creator.name} src={creator.avatarUrl} size="md" />
+              <li
+                key={creator.id}
+                className="flex items-center gap-3 px-4 py-3.5 hover:bg-bg-subtle/40 transition-colors cursor-pointer"
+                onClick={() => router.push(`/creators/${creator.id}`)}
+              >
+                <CreatorAvatar name={creator.name} avatarUrl={creator.avatarUrl} size="md" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate">{creator.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-text-primary truncate">{creator.name}</p>
+                    {creator.status !== 'ACTIVE' && (
+                      <Badge variant={creator.status === 'ARCHIVED' ? 'default' : 'warning'} size="sm">
+                        {creator.status === 'ARCHIVED' ? 'Archived' : 'Paused'}
+                      </Badge>
+                    )}
+                  </div>
                   {creator.email && (
                     <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1">
                       <Mail size={11} className="shrink-0" />

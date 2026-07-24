@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ImageIcon, Video } from 'lucide-react';
+import { ImageIcon, Video, FileText } from 'lucide-react';
 import { fetchMediaBlobUrl } from '@/lib/media';
-import type { MediaItem } from '@/types/workspace';
+import type { MediaItem, MediaType } from '@/types/workspace';
 
 interface MediaThumbnailProps {
   media: MediaItem;
   className?: string;
 }
 
-const MEDIA_COLOR: Record<'image' | 'video', string> = { image: '#3B82F6', video: '#7C3AED' };
+const MEDIA_COLOR: Record<MediaType, string> = { image: '#3B82F6', video: '#7C3AED', document: '#F59E0B' };
 
 export function MediaThumbnail({ media, className = '' }: MediaThumbnailProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -47,6 +47,8 @@ export function MediaThumbnail({ media, className = '' }: MediaThumbnailProps) {
     <div className={`flex items-center justify-center ${className}`} style={{ background: `${color}14` }}>
       {media.type === 'video' ? (
         <Video size={28} style={{ color }} className="opacity-60" />
+      ) : media.type === 'document' ? (
+        <FileText size={28} style={{ color }} className="opacity-60" />
       ) : (
         <ImageIcon size={28} style={{ color }} className="opacity-60" />
       )}

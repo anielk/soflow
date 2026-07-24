@@ -8,6 +8,7 @@ interface RawMedia {
   ownerId: string;
   ownerName: string | null;
   ownerEmail: string;
+  creatorId: string | null;
   filename: string;
   originalFilename: string;
   mimeType: string;
@@ -16,12 +17,15 @@ interface RawMedia {
   width: number | null;
   height: number | null;
   duration: number | null;
-  type: 'IMAGE' | 'VIDEO';
+  type: 'IMAGE' | 'VIDEO' | 'DOCUMENT';
   status: 'PROCESSING' | 'READY' | 'FAILED';
   hasThumbnail: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+const TYPE_FROM_API: Record<RawMedia['type'], MediaType> = { IMAGE: 'image', VIDEO: 'video', DOCUMENT: 'document' };
+const TYPE_TO_API: Record<MediaType, RawMedia['type']> = { image: 'IMAGE', video: 'VIDEO', document: 'DOCUMENT' };
 
 function mapMedia(raw: RawMedia): MediaItem {
   return {
@@ -29,6 +33,7 @@ function mapMedia(raw: RawMedia): MediaItem {
     workspaceId: raw.workspaceId,
     ownerId: raw.ownerId,
     ownerName: raw.ownerName ?? raw.ownerEmail,
+    creatorId: raw.creatorId,
     filename: raw.filename,
     originalFilename: raw.originalFilename,
     mimeType: raw.mimeType,
@@ -37,7 +42,7 @@ function mapMedia(raw: RawMedia): MediaItem {
     width: raw.width,
     height: raw.height,
     duration: raw.duration,
-    type: raw.type === 'VIDEO' ? 'video' : 'image',
+    type: TYPE_FROM_API[raw.type],
     status: raw.status.toLowerCase() as MediaFileStatus,
     hasThumbnail: raw.hasThumbnail,
     createdAt: raw.createdAt,
@@ -48,6 +53,8 @@ function mapMedia(raw: RawMedia): MediaItem {
 export interface ListMediaParams {
   search?: string;
   type?: MediaType;
+  /** Scope to one creator's media library. Omit for the workspace's general library. */
+  creatorId?: string;
   sortBy?: 'createdAt' | 'filename' | 'sizeBytes';
   sortDir?: 'asc' | 'desc';
   page?: number;
@@ -64,7 +71,8 @@ export interface ListMediaResult {
 export async function listMedia(params: ListMediaParams = {}): Promise<ListMediaResult> {
   const query = new URLSearchParams();
   if (params.search) query.set('search', params.search);
-  if (params.type) query.set('type', params.type === 'video' ? 'VIDEO' : 'IMAGE');
+  if (params.type) query.set('type', TYPE_TO_API[params.type]);
+  if (params.creatorId) query.set('creatorId', params.creatorId);
   if (params.sortBy) query.set('sortBy', params.sortBy);
   if (params.sortDir) query.set('sortDir', params.sortDir);
   if (params.page) query.set('page', String(params.page));
@@ -125,6 +133,8 @@ export async function fetchMediaBlobUrl(
 export interface UploadOptions {
   onProgress?: (percent: number) => void;
   signal?: AbortSignal;
+  /** Attach the upload to a specific creator's media library instead of the general workspace library. */
+  creatorId?: string;
 }
 
 export function uploadMedia(file: File, options: UploadOptions = {}): Promise<MediaItem> {
@@ -132,6 +142,7 @@ export function uploadMedia(file: File, options: UploadOptions = {}): Promise<Me
     const xhr = new XMLHttpRequest();
     const formData = new FormData();
     formData.append('file', file);
+    if (options.creatorId) formData.append('creatorId', options.creatorId);
 
     xhr.open('POST', apiUrl('/media/upload'));
     const token = getAuthToken();

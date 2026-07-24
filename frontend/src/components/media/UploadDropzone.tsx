@@ -2,7 +2,7 @@
 
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent } from 'react';
-import { UploadCloud, X, RotateCcw, FileImage, FileVideo } from 'lucide-react';
+import { UploadCloud, X, RotateCcw, FileImage, FileVideo, FileText } from 'lucide-react';
 import { uploadMedia } from '@/lib/media';
 import type { MediaItem } from '@/types/workspace';
 
@@ -23,10 +23,12 @@ export interface UploadDropzoneHandle {
 
 interface UploadDropzoneProps {
   onUploaded: (media: MediaItem) => void;
+  /** Attach uploads to a specific creator's media library instead of the general workspace library. */
+  creatorId?: string;
 }
 
 const MAX_CONCURRENT_UPLOADS = 3;
-const ACCEPTED_EXTENSIONS = '.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.mkv,.webm';
+const ACCEPTED_EXTENSIONS = '.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.mkv,.webm,.pdf,.docx,.xlsx';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -35,7 +37,7 @@ function formatBytes(bytes: number): string {
 }
 
 export const UploadDropzone = forwardRef<UploadDropzoneHandle, UploadDropzoneProps>(function UploadDropzone(
-  { onUploaded },
+  { onUploaded, creatorId },
   ref,
 ) {
   const [tasks, setTasks] = useState<UploadTask[]>([]);
@@ -64,6 +66,7 @@ export const UploadDropzone = forwardRef<UploadDropzoneHandle, UploadDropzonePro
 
     uploadMedia(task.file, {
       signal: task.controller.signal,
+      creatorId,
       onProgress: (percent) => {
         setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, progress: percent } : t)));
       },
@@ -152,7 +155,7 @@ export const UploadDropzone = forwardRef<UploadDropzoneHandle, UploadDropzonePro
         <p className="text-sm text-text-secondary">
           <span className="text-violet-400 font-medium">Click to upload</span> or drag and drop
         </p>
-        <p className="text-xs text-text-disabled">Images (jpg, png, webp, gif) or videos (mp4, mov, mkv, webm)</p>
+        <p className="text-xs text-text-disabled">Images, videos, or documents (pdf, docx, xlsx)</p>
         <input
           ref={inputRef}
           type="file"
@@ -172,8 +175,10 @@ export const UploadDropzone = forwardRef<UploadDropzoneHandle, UploadDropzonePro
             >
               {task.file.type.startsWith('video') ? (
                 <FileVideo size={16} className="text-violet-400 shrink-0" />
-              ) : (
+              ) : task.file.type.startsWith('image') ? (
                 <FileImage size={16} className="text-blue-400 shrink-0" />
+              ) : (
+                <FileText size={16} className="text-amber-400 shrink-0" />
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">

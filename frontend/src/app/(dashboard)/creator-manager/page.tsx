@@ -54,7 +54,7 @@ const MOCK_POSTS: Post[] = [
   },
 ];
 
-const MEDIA_COLOR: Record<MediaType, string> = { video: '#7C3AED', image: '#3B82F6' };
+const MEDIA_COLOR: Record<MediaType, string> = { video: '#7C3AED', image: '#3B82F6', document: '#F59E0B' };
 
 const published = MOCK_POSTS.filter((p) => p.status === 'published');
 const scheduled = MOCK_POSTS.filter((p) => p.status === 'scheduled');

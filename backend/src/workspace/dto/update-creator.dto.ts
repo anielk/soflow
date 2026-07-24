@@ -10,22 +10,22 @@ export class UpdateCreatorDto {
 
   @IsOptional()
   @IsEmail()
-  email?: string;
+  email?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(30)
-  phone?: string;
+  phone?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(2000)
-  bio?: string;
+  bio?: string | null;
 
   @IsOptional()
   @IsString()
   @MaxLength(5000)
-  notes?: string;
+  notes?: string | null;
 
   @IsOptional()
   @IsArray()
@@ -35,4 +35,9 @@ export class UpdateCreatorDto {
   @IsOptional()
   @IsEnum(CreatorStatus)
   status?: CreatorStatus;
+
+  /** A Media ID from this creator's own library, or null to unset. Validated against that library in the service — never trust it as an arbitrary URL. */
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string | null;
 }

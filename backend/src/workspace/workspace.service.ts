@@ -367,6 +367,11 @@ export class WorkspaceService {
     this.assertCanManage(role);
     const existing = await this.getOwnedCreatorOrThrow(workspaceId, creatorId);
 
+    if (dto.avatarUrl) {
+      const media = await this.prisma.media.findFirst({ where: { id: dto.avatarUrl, workspaceId, creatorId } });
+      if (!media) throw new NotFoundException("Media not found in this creator's library");
+    }
+
     const updated = await this.prisma.creator.update({ where: { id: creatorId }, data: dto });
 
     const actorName = await this.getActorDisplayName(userId);

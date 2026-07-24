@@ -1,6 +1,6 @@
 export type PostType        = 'free' | 'ppv';
 export type PostStatus      = 'published' | 'scheduled' | 'draft' | 'failed';
-export type MediaType       = 'image' | 'video';
+export type MediaType       = 'image' | 'video' | 'document';
 export type NotifType       = 'like' | 'tip' | 'subscription' | 'renewal' | 'comment' | 'ppv_unlock';
 export type StatementStatus = 'paid' | 'pending' | 'processing';
 
@@ -28,6 +28,7 @@ export interface MediaItem {
   workspaceId:      string;
   ownerId:          string;
   ownerName:        string;
+  creatorId:        string | null;
   filename:         string;
   originalFilename: string;
   mimeType:         string;
@@ -124,14 +125,53 @@ export interface NewWorkspaceMember extends WorkspaceMemberRecord {
   emailSent: boolean;
 }
 
+export type CreatorStatus = 'ACTIVE' | 'PAUSED' | 'ARCHIVED';
+
 export interface CreatorRecord {
-  id:          string;
-  workspaceId: string;
-  name:        string;
-  email:       string | null;
-  avatarUrl:   string | null;
+  id:        string;
+  name:      string;
+  email:     string | null;
+  phone:     string | null;
+  bio:       string | null;
+  notes:     string | null;
+  tags:      string[];
+  avatarUrl: string | null;
+  status:    CreatorStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatorStats {
+  mediaCount:    number;
+  imageCount:    number;
+  videoCount:    number;
+  documentCount: number;
+  storageBytes:  number;
+}
+
+export interface ActivityLogItem {
+  id:         string;
+  workspaceId: string | null;
+  userId:      string | null;
+  actorName:   string | null;
+  message:     string;
+  category:    string;
+  targetType:  string | null;
+  targetId:    string | null;
   createdAt:   string;
-  updatedAt:   string;
+}
+
+export interface AuditLogItem {
+  id:         string;
+  workspaceId: string | null;
+  userId:      string | null;
+  userLabel:   string | null;
+  eventType:   string;
+  category:    string;
+  targetType:  string | null;
+  targetId:    string | null;
+  metadata:    Record<string, unknown> | null;
+  createdAt:   string;
 }
 
 export interface LocaleOption {
