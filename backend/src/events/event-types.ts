@@ -6,10 +6,11 @@ import { AuditCategory } from '@prisma/client';
  * AuditService and ActivityService already listen for everything on the
  * shared channel, so neither needs a code change.
  *
- * Some brief-listed events (user.removed, creator.deleted, role.changed,
- * ai.provider_changed, storage.provider_changed) are defined here as future
- * hooks but not yet published anywhere — the underlying feature to trigger
- * them doesn't exist in the app yet. See Sprint 5D's "Known limitations".
+ * Some brief-listed events (user.removed, role.changed, ai.provider_changed,
+ * storage.provider_changed) are defined here as future hooks but not yet
+ * published anywhere — the underlying feature to trigger them doesn't exist
+ * in the app yet. creator.deleted is now published for real (see
+ * WorkspaceService.removeCreator).
  */
 export const EVENT_TYPES = {
   WORKSPACE_CREATED: 'workspace.created',
@@ -23,6 +24,7 @@ export const EVENT_TYPES = {
   ROLE_CHANGED: 'role.changed',
 
   CREATOR_CREATED: 'creator.created',
+  CREATOR_UPDATED: 'creator.updated',
   CREATOR_DELETED: 'creator.deleted',
 
   MEDIA_UPLOADED: 'media.uploaded',
@@ -54,6 +56,7 @@ export const EVENT_CATEGORIES: Record<EventType, AuditCategory> = {
   [EVENT_TYPES.ROLE_CHANGED]: AuditCategory.USER,
 
   [EVENT_TYPES.CREATOR_CREATED]: AuditCategory.CREATOR,
+  [EVENT_TYPES.CREATOR_UPDATED]: AuditCategory.CREATOR,
   [EVENT_TYPES.CREATOR_DELETED]: AuditCategory.CREATOR,
 
   [EVENT_TYPES.MEDIA_UPLOADED]: AuditCategory.MEDIA,

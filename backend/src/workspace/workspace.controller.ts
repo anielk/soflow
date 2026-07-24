@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Patch, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Patch, Param, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -13,6 +13,7 @@ import {
 } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
+import { UpdateCreatorDto } from './dto/update-creator.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workspace')
@@ -78,5 +79,26 @@ export class WorkspaceController {
   @Post('creators')
   addCreator(@Body() dto: AddCreatorDto, @Req() req: any) {
     return this.workspaceService.addCreator(req.user.userId, dto);
+  }
+
+  @Get('creators/:id')
+  getCreator(@Param('id') id: string, @Req() req: any) {
+    return this.workspaceService.getCreator(req.user.userId, id);
+  }
+
+  @Get('creators/:id/stats')
+  getCreatorStats(@Param('id') id: string, @Req() req: any) {
+    return this.workspaceService.getCreatorStats(req.user.userId, id);
+  }
+
+  @Patch('creators/:id')
+  updateCreator(@Param('id') id: string, @Body() dto: UpdateCreatorDto, @Req() req: any) {
+    return this.workspaceService.updateCreator(req.user.userId, id, dto);
+  }
+
+  @Delete('creators/:id')
+  async removeCreator(@Param('id') id: string, @Req() req: any) {
+    await this.workspaceService.removeCreator(req.user.userId, id);
+    return { success: true };
   }
 }

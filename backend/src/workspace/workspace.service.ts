@@ -15,6 +15,8 @@ import { EVENT_TYPES } from '../events/event-types';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
+import { UpdateCreatorDto } from './dto/update-creator.dto';
+import { CreatorResponseDto, CreatorStatsDto, toCreatorResponse } from './dto/creator-response.dto';
 import { validateLogoFile } from './validators/logo-validation';
 
 const MANAGE_ROLES: Role[] = [Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN];
@@ -306,10 +308,11 @@ export class WorkspaceService {
     return members.map((m) => ({ id: m.id, role: m.role, joinedAt: m.joinedAt, user: m.user }));
   }
 
-  async addCreator(userId: string, dto: AddCreatorDto) {
-    const workspaceId = await this.resolveWorkspaceId(userId);
+  async addCreator(userId: string, dto: AddCreatorDto): Promise<CreatorResponseDto> {
+    const { workspaceId, role } = await this.resolveMembership(userId);
+    this.assertCanManage(role);
     const creator = await this.prisma.creator.create({
-      data: { workspaceId, name: dto.name, email: dto.email },
+      data: { workspaceId, name: dto.name, email: dto.email, phone: dto.phone, bio: dto.bio, tags: dto.tags ?? [] },
     });
 
     const actorName = await this.getActorDisplayName(userId);
@@ -323,12 +326,91 @@ export class WorkspaceService {
       message: `${actorName} created creator "${creator.name}"`,
     });
 
-    return creator;
+    return toCreatorResponse(creator);
   }
 
-  async listCreators(userId: string) {
+  async listCreators(userId: string): Promise<CreatorResponseDto[]> {
     const workspaceId = await this.resolveWorkspaceId(userId);
-    return this.prisma.creator.findMany({ where: { workspaceId }, orderBy: { createdAt: 'desc' } });
+    const creators = await this.prisma.creator.findMany({ where: { workspaceId }, orderBy: { createdAt: 'desc' } });
+    return creators.map(toCreatorResponse);
+  }
+
+  async getCreator(userId: string, creatorId: string): Promise<CreatorResponseDto> {
+    const { workspaceId } = await this.resolveMembership(userId);
+    const creator = await this.getOwnedCreatorOrThrow(workspaceId, creatorId);
+    return toCreatorResponse(creator);
+  }
+
+  async getCreatorStats(userId: string, creatorId: string): Promise<CreatorStatsDto> {
+    const { workspaceId } = await this.resolveMembership(userId);
+    await this.getOwnedCreatorOrThrow(workspaceId, creatorId);
+
+    const [mediaCount, imageCount, videoCount, documentCount, sizeAgg] = await Promise.all([
+      this.prisma.media.count({ where: { creatorId } }),
+      this.prisma.media.count({ where: { creatorId, type: 'IMAGE' } }),
+      this.prisma.media.count({ where: { creatorId, type: 'VIDEO' } }),
+      this.prisma.media.count({ where: { creatorId, type: 'DOCUMENT' } }),
+      this.prisma.media.aggregate({ where: { creatorId }, _sum: { sizeBytes: true } }),
+    ]);
+
+    return {
+      mediaCount,
+      imageCount,
+      videoCount,
+      documentCount,
+      storageBytes: Number(sizeAgg._sum.sizeBytes ?? 0n),
+    };
+  }
+
+  async updateCreator(userId: string, creatorId: string, dto: UpdateCreatorDto): Promise<CreatorResponseDto> {
+    const { workspaceId, role } = await this.resolveMembership(userId);
+    this.assertCanManage(role);
+    const existing = await this.getOwnedCreatorOrThrow(workspaceId, creatorId);
+
+    const updated = await this.prisma.creator.update({ where: { id: creatorId }, data: dto });
+
+    const actorName = await this.getActorDisplayName(userId);
+    const statusChanged = dto.status !== undefined && dto.status !== existing.status;
+    this.systemEvents.publish({
+      type: EVENT_TYPES.CREATOR_UPDATED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Creator',
+      targetId: creatorId,
+      message: statusChanged
+        ? `${actorName} set "${updated.name}" to ${dto.status}`
+        : `${actorName} updated creator "${updated.name}"`,
+      metadata: { fields: Object.keys(dto) },
+    });
+
+    return toCreatorResponse(updated);
+  }
+
+  async removeCreator(userId: string, creatorId: string): Promise<void> {
+    const { workspaceId, role } = await this.resolveMembership(userId);
+    this.assertCanManage(role);
+    const existing = await this.getOwnedCreatorOrThrow(workspaceId, creatorId);
+
+    await this.prisma.creator.delete({ where: { id: creatorId } });
+
+    const actorName = await this.getActorDisplayName(userId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.CREATOR_DELETED,
+      workspaceId,
+      userId,
+      actorName,
+      targetType: 'Creator',
+      targetId: creatorId,
+      message: `${actorName} deleted creator "${existing.name}"`,
+    });
+  }
+
+  /** Workspace-scoped lookup — 404s (not 403) if the creator belongs to a different workspace, so its existence is never leaked cross-tenant. */
+  private async getOwnedCreatorOrThrow(workspaceId: string, creatorId: string) {
+    const creator = await this.prisma.creator.findFirst({ where: { id: creatorId, workspaceId } });
+    if (!creator) throw new NotFoundException('Creator not found');
+    return creator;
   }
 
   private generateUsername(email: string): string {

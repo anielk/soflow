@@ -5,6 +5,12 @@ import { MediaType } from '@prisma/client';
 const ALLOWED_EXTENSIONS: Record<MediaType, string[]> = {
   IMAGE: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
   VIDEO: ['mp4', 'mov', 'mkv', 'webm'],
+  // Deliberately only formats the `file-type` sniffer can actually verify by
+  // magic bytes (see the content-vs-extension check below) — plain-text
+  // formats like .txt/.csv have no signature to sniff, and legacy binary
+  // Office formats (.doc/.xls) are unreliable to detect, so none of those
+  // are accepted here rather than silently weakening the content check.
+  DOCUMENT: ['pdf', 'docx', 'xlsx'],
 };
 
 export interface ValidatedFile {
@@ -16,6 +22,7 @@ export interface ValidatedFile {
 function bucketForExtension(extension: string): MediaType | null {
   if (ALLOWED_EXTENSIONS.IMAGE.includes(extension)) return MediaType.IMAGE;
   if (ALLOWED_EXTENSIONS.VIDEO.includes(extension)) return MediaType.VIDEO;
+  if (ALLOWED_EXTENSIONS.DOCUMENT.includes(extension)) return MediaType.DOCUMENT;
   return null;
 }
 

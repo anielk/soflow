@@ -170,6 +170,7 @@ model AISettings {
 enum MediaType {
   IMAGE
   VIDEO
+  DOCUMENT
 }
 
 enum MediaStatus {
@@ -182,6 +183,7 @@ model Media {
   id               String      @id @default(cuid())
   workspaceId      String
   ownerId          String
+  creatorId        String?                         // optional: which agency-managed Creator this belongs to (null = general workspace media)
   filename         String                          // generated safe on-disk name
   originalFilename String                          // user-supplied name, display only, never trusted
   mimeType         String
@@ -199,25 +201,40 @@ model Media {
   updatedAt        DateTime    @updatedAt
   workspace        Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   owner            User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  // SetNull rather than Cascade: deleting a creator must not silently delete
+  // their uploaded files — media just becomes unassigned, still visible in
+  // the workspace's general library.
+  creator          Creator?    @relation(fields: [creatorId], references: [id], onDelete: SetNull)
   @@index([workspaceId])
+  @@index([creatorId])
 }
 
 // ─── Creators (agency-managed roster) ────────────────────────────────────────
 // A Creator is a person the agency manages content/analytics for — distinct
 // from a User (a Leinaflow login/teammate). Creators don't need their own
-// account here; workspace members manage them. Deliberately minimal: this is
-// the foundation a future Creator Management module builds on, not that
-// module itself — name/email only, no CRUD beyond create+list yet.
+// account here; workspace members manage them.
+
+enum CreatorStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
 
 model Creator {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   workspaceId String
   name        String
   email       String?
+  phone       String?
+  bio         String?
+  notes       String?       @db.Text
+  tags        String[]      @default([])
   avatarUrl   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  status      CreatorStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  media       Media[]
   @@index([workspaceId])
 }
 

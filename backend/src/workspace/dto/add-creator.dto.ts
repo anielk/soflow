@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class AddCreatorDto {
   @IsString()
@@ -9,4 +9,19 @@ export class AddCreatorDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  bio?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }
