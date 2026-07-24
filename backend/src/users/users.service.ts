@@ -134,17 +134,12 @@ export class UsersService {
   }
 
   async updateProfile(userId: string, profileData: UpdateProfileDto): Promise<ProfileResponseDto> {
+    const currentUser = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+
     // Update user-level fields if provided
     const userUpdateFields: any = {};
     if (profileData.username !== undefined) userUpdateFields.username = profileData.username;
     if (profileData.bannerUrl !== undefined) userUpdateFields.bannerUrl = profileData.bannerUrl;
-
-    if (Object.keys(userUpdateFields).length > 0) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: userUpdateFields,
-      });
-    }
 
     // First check if the user has a creator profile
     let creatorProfile = await this.prisma.creatorProfile.findUnique({
@@ -157,6 +152,22 @@ export class UsersService {
     if (profileData.avatarUrl !== undefined) creatorUpdateFields.avatarUrl = profileData.avatarUrl;
     if (profileData.website !== undefined) creatorUpdateFields.website = profileData.website;
     if (profileData.socialLinks !== undefined) creatorUpdateFields.socialLinks = profileData.socialLinks;
+
+    // Saving any creator-profile field is what "becoming a creator" means in
+    // this self-service flow — nothing else in the codebase ever flips
+    // isCreator, so without this the public /creators/:username page would
+    // 404 forever for every account, even one that fully filled out its
+    // public profile via this same endpoint.
+    if (Object.keys(creatorUpdateFields).length > 0 && !currentUser.isCreator) {
+      userUpdateFields.isCreator = true;
+    }
+
+    if (Object.keys(userUpdateFields).length > 0) {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: userUpdateFields,
+      });
+    }
 
     if (Object.keys(creatorUpdateFields).length > 0) {
       if (!creatorProfile) {

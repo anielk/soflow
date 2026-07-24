@@ -9,14 +9,12 @@ import { Globe, ExternalLink } from 'lucide-react';
 import { LogoIcon } from '@/components/brand/Logo';
 
 interface Creator {
-  name?:    string;
-  email:    string;
-  bio?:     string;
-  avatarUrl?: string;
-  website?: string;
-  creatorProfile?: {
-    socialLinks?: Record<string, string>;
-  };
+  name?:        string;
+  email:        string;
+  bio?:         string;
+  avatarUrl?:   string;
+  website?:     string;
+  socialLinks?: Record<string, string>;
 }
 
 export default function PublicCreatorPage({ params }: { params: Promise<{ username: string }> }) {
@@ -98,26 +96,25 @@ export default function PublicCreatorPage({ params }: { params: Promise<{ userna
               </div>
             )}
 
-            {creator.creatorProfile?.socialLinks &&
-              Object.keys(creator.creatorProfile.socialLinks).length > 0 && (
-                <div>
-                  <h2 className="text-xs font-medium uppercase tracking-wider text-text-disabled mb-2">Social</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(creator.creatorProfile.socialLinks).map(([platform, url]) => (
-                      <a
-                        key={platform}
-                        href={String(url)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-bg-subtle border border-bg-border text-xs text-text-secondary hover:text-text-primary hover:border-bg-muted transition-colors"
-                      >
-                        {platform.charAt(0).toUpperCase() + platform.slice(1)}
-                        <ExternalLink size={10} />
-                      </a>
-                    ))}
-                  </div>
+            {creator.socialLinks && Object.keys(creator.socialLinks).length > 0 && (
+              <div>
+                <h2 className="text-xs font-medium uppercase tracking-wider text-text-disabled mb-2">Social</h2>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(creator.socialLinks).map(([platform, url]) => (
+                    <a
+                      key={platform}
+                      href={String(url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-bg-subtle border border-bg-border text-xs text-text-secondary hover:text-text-primary hover:border-bg-muted transition-colors"
+                    >
+                      {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      <ExternalLink size={10} />
+                    </a>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
           </div>
         )}
       </main>

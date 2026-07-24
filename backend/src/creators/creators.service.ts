@@ -1,31 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PublicCreatorProfileDto, toPublicCreatorProfile } from './dto/public-creator-profile.dto';
 
 @Injectable()
 export class CreatorsService {
   constructor(private prisma: PrismaService) {}
 
-  async getByUsername(username: string) {
-    // This is a placeholder implementation
-    // In a real application, this would query the database for creator by username
+  /**
+   * The unauthenticated public profile page. Looks up the real, unique
+   * `username` field — this used to match by `email` as a stand-in because
+   * no username field existed yet; one does now (see User.username).
+   *
+   * Also requires `isCreator: true`: this is a self-service opt-in feature
+   * (see UsersService.updateProfile / the creator/edit page) — every
+   * registered account has a username, but only a user who has actually
+   * turned on their creator profile should be reachable at this public URL.
+   * Without this check, switching from the email hack to a real username
+   * lookup would have made this endpoint an accidental full user directory.
+   */
+  async getByUsername(username: string): Promise<PublicCreatorProfileDto> {
     const user = await this.prisma.user.findUnique({
-      where: { email: username }, // Simplified - in reality you'd have a unique username field
-      include: {
-        creatorProfile: true,
-      },
+      where: { username },
+      include: { creatorProfile: true },
     });
 
-    if (!user) {
-      return null;
+    if (!user || !user.isCreator) {
+      throw new NotFoundException('Creator not found');
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name || user.email.split('@')[0],
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      creatorProfile: user.creatorProfile,
-    };
+    return toPublicCreatorProfile(user);
   }
 }
