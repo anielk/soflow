@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Input } from '@/components/ui';
-import { UserPlus, TrendingUp, Users, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Button, Input, ComingSoonNotice } from '@/components/ui';
+import { UserPlus, TrendingUp, Users, AlertCircle } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
 export default function AutoFollowPage() {
@@ -13,16 +13,16 @@ export default function AutoFollowPage() {
   const [dailyLimit,  setDailyLimit]  = useState('50');
   const [targetNiche, setTargetNiche] = useState('fitness, lifestyle');
   const [minFans,     setMinFans]     = useState('500');
-  const [saved,       setSaved]       = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated()) router.push('/login');
   }, [router]);
 
   function handleSave(e: React.FormEvent) {
+    // Intentionally does nothing beyond preventing a page reload — there is
+    // no backend for auto-follow. This used to show a fake "Settings saved
+    // successfully" toast; removed rather than left misleading.
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   }
 
   const MOCK_STATS = [
@@ -40,6 +40,8 @@ export default function AutoFollowPage() {
           Automatically follow creators in your niche to grow your audience organically
         </p>
       </div>
+
+      <ComingSoonNotice feature="Auto-follow" />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
@@ -82,12 +84,6 @@ export default function AutoFollowPage() {
             </button>
           </div>
 
-          {enabled && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-success-text bg-success-subtle border border-success/20 px-3 py-2 rounded">
-              <CheckCircle2 size={12} />
-              Auto-follow is running. Follows are processed during off-peak hours.
-            </div>
-          )}
         </div>
 
         {/* Config form */}
@@ -96,13 +92,6 @@ export default function AutoFollowPage() {
             <h3 className="text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em]">
               Follow settings
             </h3>
-
-            {saved && (
-              <div className="flex items-center gap-2 px-3 py-2.5 rounded bg-success-subtle border border-success/20 text-success-text text-sm">
-                <CheckCircle2 size={14} />
-                Settings saved successfully
-              </div>
-            )}
 
             <Input
               label="Daily follow limit"
@@ -139,7 +128,7 @@ export default function AutoFollowPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" variant="primary" size="md">Save settings</Button>
+            <Button type="submit" variant="primary" size="md" disabled>Save settings (not implemented)</Button>
           </div>
         </form>
       </div>

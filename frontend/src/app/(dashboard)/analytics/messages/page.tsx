@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import { MessageSquare, TrendingUp, Clock, DollarSign } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
+import { ComingSoonNotice } from '@/components/ui';
 
 const MOCK_CREATORS_MSG = [
   { name: 'Emma Rose',    username: 'emmarose',   sent: 3240, opens: 2861, replies: 1540, conversions: 210, revenue: 1840, avgResponse: 3 },
@@ -48,6 +49,11 @@ export default function MessageDashboardPage() {
         <h1 className="text-xl font-semibold text-text-primary">Message dashboard</h1>
         <p className="mt-1 text-sm text-text-muted">Open rates, reply rates and revenue from fan messaging</p>
       </div>
+
+      <ComingSoonNotice
+        feature="Message analytics"
+        description="There is no Message data model in Leinaflow yet — every figure below, including the hardcoded 'Avg response' stat, is a fabricated example."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

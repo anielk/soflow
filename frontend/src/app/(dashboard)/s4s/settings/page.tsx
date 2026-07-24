@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Input } from '@/components/ui';
-import { CheckCircle2, Settings } from 'lucide-react';
+import { Button, Input, ComingSoonNotice } from '@/components/ui';
+import { Settings } from 'lucide-react';
 
 export default function S4SSettingsPage() {
   const router = useRouter();
-  const [saved, setSaved] = useState(false);
 
   // Preference toggles
   const [autoAccept,      setAutoAccept]      = useState(false);
@@ -27,9 +26,10 @@ export default function S4SSettingsPage() {
   }, [router]);
 
   function handleSave(e: React.FormEvent) {
+    // Intentionally a no-op beyond preventing a page reload — there is no
+    // S4S backend. Used to show a fake "Settings saved successfully" toast;
+    // removed rather than left misleading.
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   }
 
   function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
@@ -63,14 +63,9 @@ export default function S4SSettingsPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-xl space-y-6">
-        {saved && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded bg-success-subtle border border-success/20 text-success-text text-sm">
-            <CheckCircle2 size={14} />
-            Settings saved successfully
-          </div>
-        )}
+      <ComingSoonNotice feature="S4S settings" />
 
+      <form onSubmit={handleSave} className="max-w-xl space-y-6">
         {/* Partner requirements */}
         <div className="bg-bg-surface border border-bg-border/60 rounded-xl overflow-hidden">
           <div className="px-5 pt-4 pb-3 border-b border-bg-border/40">
@@ -169,7 +164,7 @@ export default function S4SSettingsPage() {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" variant="primary" size="md">Save settings</Button>
+          <Button type="submit" variant="primary" size="md" disabled>Save settings (not implemented)</Button>
         </div>
       </form>
     </div>

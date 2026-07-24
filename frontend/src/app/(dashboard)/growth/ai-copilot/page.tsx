@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Zap, MessageSquare, Calendar, BarChart3, Star, ArrowRight } from 'lucide-react';
 
 const FEATURES = [
@@ -62,10 +62,15 @@ export default function AICopilotPage() {
             Intelligent suggestions and automation to help you earn more with less effort
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Zap}>
+        <Button variant="primary" size="md" icon={Zap} disabled>
           Enable Copilot
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="AI Copilot"
+        description="No AI provider is connected — see Admin → AI. Every suggestion on this page is a hardcoded example, not a real, generated one."
+      />
 
       {/* Hero promo */}
       <div className="bg-gradient-to-br from-violet-600/10 via-violet-600/5 to-bg-surface border border-violet-500/20 rounded-xl p-6">
@@ -82,7 +87,7 @@ export default function AICopilotPage() {
           Copilot analyzes your fan data in real-time and suggests the right message, at the right time,
           for the right fan. Agencies using Copilot see an average of 23% more revenue per creator.
         </p>
-        <Button variant="primary" size="md">
+        <Button variant="primary" size="md" disabled>
           Request early access
         </Button>
       </div>

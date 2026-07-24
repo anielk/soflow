@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, Play, Pause, Mail, TrendingUp, Send, ChevronUp, ChevronDown } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -89,10 +89,15 @@ export default function SmartMessagesPage() {
             Automated message sequences that trigger based on fan actions
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           New sequence
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Smart messages"
+        description="No message sequences actually send anything — the Pause/Start toggle below only changes local UI state, and there is no Message data model to send through."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

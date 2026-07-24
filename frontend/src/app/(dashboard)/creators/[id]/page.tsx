@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge, Button, EmptyState, Input } from '@/components/ui';
+import { Avatar, Badge, Button, EmptyState, Input, ComingSoonNotice } from '@/components/ui';
 import {
   ArrowLeft, Settings, Users, TrendingUp, BarChart3, FileText,
   CheckCircle2, Globe, Edit3, Wifi,
@@ -82,13 +82,12 @@ function OverviewTab({ creator }: { creator: Creator }) {
 function ProfileTab({ creator }: { creator: Creator }) {
   const [bio,     setBio]     = useState(creator.bio);
   const [price,   setPrice]   = useState(String(creator.subscriptionPrice));
-  const [success, setSuccess] = useState(false);
 
   function handleSave(e: React.FormEvent) {
+    // There is no PUT /v1/creators/:id/profile endpoint — this used to show
+    // a fake "Profile saved successfully" toast; removed rather than left
+    // misleading.
     e.preventDefault();
-    // TODO: PUT /v1/creators/:id/profile
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
   }
 
   return (
@@ -106,13 +105,6 @@ function ProfileTab({ creator }: { creator: Creator }) {
       </div>
 
       <form onSubmit={handleSave} className="space-y-5">
-        {success && (
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded bg-success-subtle border border-success/20 text-success-text text-sm">
-            <CheckCircle2 size={14} />
-            Profile saved successfully
-          </div>
-        )}
-
         <div className="bg-bg-surface border border-bg-border/60 rounded-xl p-5 space-y-4">
           <h3 className="text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em]">
             Public profile
@@ -153,7 +145,7 @@ function ProfileTab({ creator }: { creator: Creator }) {
         </div>
 
         <div className="flex justify-end">
-          <Button type="submit" variant="primary" size="md">Save changes</Button>
+          <Button type="submit" variant="primary" size="md" disabled>Save changes (not implemented)</Button>
         </div>
       </form>
     </div>
@@ -275,10 +267,10 @@ function SettingsTab({ creator }: { creator: Creator }) {
           )}
 
           <div className="flex gap-2 pt-1">
-            <Button variant="secondary" size="sm" icon={Wifi}>
+            <Button variant="secondary" size="sm" icon={Wifi} disabled>
               Test connection
             </Button>
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="sm" disabled>
               Save proxy
             </Button>
           </div>
@@ -289,9 +281,9 @@ function SettingsTab({ creator }: { creator: Creator }) {
       <div className="bg-bg-surface border border-danger/20 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-danger-text mb-1">Remove creator</h3>
         <p className="text-xs text-text-muted mb-3">
-          This will disconnect the creator from your agency. All historical data is retained.
+          Not implemented — this page is example data, not a real, persisted creator record.
         </p>
-        <Button variant="danger" size="sm">Remove from agency</Button>
+        <Button variant="danger" size="sm" disabled>Remove from agency</Button>
       </div>
     </div>
   );
@@ -371,6 +363,11 @@ export default function CreatorDetailPage() {
           </div>
         </div>
       </div>
+
+      <ComingSoonNotice
+        feature="Creator detail management"
+        description="This page shows example data disconnected from your real workspace creators (list at /creators) — there is no GET/PUT /workspace/creators/:id endpoint yet."
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-bg-border/40">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Input, Textarea } from '@/components/ui';
+import { Button, Input, Textarea, ComingSoonNotice } from '@/components/ui';
 import { Upload, X, ImageIcon, Video } from 'lucide-react';
 
 type PostType     = 'free' | 'ppv';
@@ -38,12 +38,11 @@ export default function NewPostPage() {
   }
 
   function handleSubmit(e: React.FormEvent) {
+    // There is no Post data model or endpoint — this used to silently
+    // redirect to /queue as if the post had been created/scheduled, which
+    // was actively misleading (it looked like it worked). Now a no-op.
     e.preventDefault();
-    // TODO: POST /v1/posts { type: postType, price, caption, scheduledAt, mediaIds }
-    router.push('/creator-manager/queue');
   }
-
-  const isValid = caption.trim().length > 0 || mediaFiles.length > 0;
 
   return (
     <div className="max-w-2xl space-y-6 animate-fade-in">
@@ -57,6 +56,11 @@ export default function NewPostPage() {
           Discard
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Post publishing"
+        description="There is no Post data model or publishing endpoint yet — submitting this form does nothing. To actually upload and manage media today, use Creator Manager → Vault."
+      />
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Post type */}
@@ -224,9 +228,9 @@ export default function NewPostPage() {
             type="submit"
             variant="primary"
             size="md"
-            disabled={!isValid}
+            disabled
           >
-            {scheduleMode === 'now' ? 'Post now' : 'Schedule post'}
+            {scheduleMode === 'now' ? 'Post now (not implemented)' : 'Schedule post (not implemented)'}
           </Button>
         </div>
       </form>

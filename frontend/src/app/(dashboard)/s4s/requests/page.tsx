@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { CheckCircle2, XCircle, Users, Clock } from 'lucide-react';
 import { formatNumber, relativeTime } from '@/lib/format';
 
@@ -61,6 +61,11 @@ export default function S4SRequestsPage() {
         <h1 className="text-xl font-semibold text-text-primary">Requests</h1>
         <p className="mt-1 text-sm text-text-muted">Manage incoming and outgoing share-for-share requests</p>
       </div>
+
+      <ComingSoonNotice
+        feature="S4S requests"
+        description="There is no S4S backend yet — Accept/Decline only update this page's local state and reset on reload."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

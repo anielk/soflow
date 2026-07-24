@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { FilePlus, Eye, TrendingUp, CalendarClock, Users, Heart, MessageCircle, ImageIcon, Video } from 'lucide-react';
 import { formatCurrency, formatNumber, relativeTime, timeUntil } from '@/lib/format';
 import type { Post, MediaType } from '@/types/workspace';
@@ -82,6 +82,11 @@ export default function OFManagerHomePage() {
           New post
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Content Manager"
+        description="Post publishing/scheduling isn't implemented — there is no Post data model yet. Everything below is example data. Real, working media management lives at Creator Manager → Vault."
+      />
 
       {/* Today's stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

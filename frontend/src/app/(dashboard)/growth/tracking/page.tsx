@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, Copy, BarChart3, Link2, Users, TrendingUp } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -65,10 +65,15 @@ export default function TrackingLinksPage() {
             UTM-tagged links to measure which channels drive the most subscribers
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           Create link
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Tracking links"
+        description="Link creation and click/conversion tracking aren't implemented — the data below is illustrative."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

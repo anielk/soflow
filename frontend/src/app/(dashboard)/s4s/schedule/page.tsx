@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { CalendarPlus, Calendar, Users, Clock } from 'lucide-react';
 
 interface S4SSession {
@@ -69,10 +69,12 @@ export default function S4SSchedulePage() {
           <h1 className="text-xl font-semibold text-text-primary">S4S Schedule</h1>
           <p className="mt-1 text-sm text-text-muted">Upcoming and past share-for-share sessions</p>
         </div>
-        <Button variant="primary" size="md" icon={CalendarPlus}>
+        <Button variant="primary" size="md" icon={CalendarPlus} disabled>
           Schedule session
         </Button>
       </div>
+
+      <ComingSoonNotice feature="S4S scheduling" />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Download, TrendingUp, Clock } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import type { Statement, StatementStatus } from '@/types/workspace';
@@ -43,10 +43,15 @@ export default function StatementsPage() {
             Monthly revenue statements — 80% net creator payout.
           </p>
         </div>
-        <Button variant="secondary" size="md" icon={Download}>
+        <Button variant="secondary" size="md" icon={Download} disabled>
           Export CSV
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Creator statements"
+        description="There is no billing/payout system in Leinaflow — every figure below (gross, fees, net payout) is fabricated example data, not a real financial record. Export/PDF buttons are disabled."
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -135,7 +140,8 @@ export default function StatementsPage() {
                       {stmt.status === 'paid' && (
                         <button
                           type="button"
-                          className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-violet-400 transition-colors"
+                          disabled
+                          className="inline-flex items-center gap-1 text-xs text-text-disabled cursor-not-allowed opacity-60"
                         >
                           <Download size={11} />
                           PDF

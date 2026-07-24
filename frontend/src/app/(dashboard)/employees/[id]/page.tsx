@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge, Button, EmptyState } from '@/components/ui';
+import { Avatar, Badge, Button, EmptyState, ComingSoonNotice } from '@/components/ui';
 import {
   ArrowLeft, MessageSquare, TrendingUp, Clock, Users,
   Calendar, Settings, Edit3,
@@ -250,9 +250,9 @@ function SettingsTab({ employee }: { employee: Employee }) {
       <div className="bg-bg-surface border border-danger/20 rounded-xl p-5">
         <h3 className="text-sm font-semibold text-danger-text mb-1">Remove employee</h3>
         <p className="text-xs text-text-muted mb-3">
-          This will permanently remove the employee from your agency. All historical data is retained.
+          Not implemented — this page is example data, not a real employee record.
         </p>
-        <Button variant="danger" size="sm">Remove employee</Button>
+        <Button variant="danger" size="sm" disabled>Remove employee</Button>
       </div>
     </div>
   );
@@ -332,6 +332,8 @@ export default function EmployeeDetailPage() {
           </div>
         </div>
       </div>
+
+      <ComingSoonNotice feature="Employee records" description="This is example data — not a real, persisted employee." />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-bg-border/40">

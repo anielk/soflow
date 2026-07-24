@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge, Button } from '@/components/ui';
+import { Avatar, Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { CalendarPlus, Clock } from 'lucide-react';
 import { MOCK_SHIFTS } from '@/lib/mock-employees';
 import type { Shift, ShiftStatus } from '@/types/employee';
@@ -62,11 +62,13 @@ export default function ShiftSchedulePage() {
           <Button variant="secondary" size="md" onClick={() => router.push('/employees')}>
             All employees
           </Button>
-          <Button variant="primary" size="md" icon={CalendarPlus}>
+          <Button variant="primary" size="md" icon={CalendarPlus} disabled>
             Add shift
           </Button>
         </div>
       </div>
+
+      <ComingSoonNotice feature="Shift scheduling" />
 
       {/* Summary row */}
       <div className="flex items-center gap-6">

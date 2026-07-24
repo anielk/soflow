@@ -1,25 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import type { Period } from '@/types/dashboard';
-import { useDashboardStats } from '@/hooks/useDashboardStats';
-import {
-  PeriodSelector,
-  RevenueOverviewCard,
-  QuickActionsRow,
-  RevenueChart,
-  ActivityFeed,
-  ScheduledPostsCard,
-  CreatorProgressCard,
-  OnboardingChecklist,
-} from '@/components/dashboard';
+import { ComingSoonNotice } from '@/components/ui';
+import { QuickActionsRow, OnboardingChecklist } from '@/components/dashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [period, setPeriod] = useState<Period>('this_month');
-  const { stats, chartData, activity, scheduledPosts, goals, loading } = useDashboardStats(period);
 
   useEffect(() => {
     if (!isAuthenticated()) router.push('/login');
@@ -27,35 +15,24 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* First-run onboarding checklist — renders nothing once complete or dismissed */}
+      {/* First-run onboarding checklist — renders nothing once complete or dismissed. Real, DB-backed. */}
       <OnboardingChecklist />
 
-      {/* Period selector row */}
-      <div className="flex items-center justify-end gap-4">
-        <PeriodSelector value={period} onChange={setPeriod} />
-      </div>
-
-      {/* Revenue hero */}
-      <RevenueOverviewCard stats={stats} loading={loading} />
-
-      {/* Quick actions */}
+      {/* Quick actions — real navigation shortcuts, not data. */}
       <QuickActionsRow />
 
-      {/* Revenue chart (2/3) + Activity feed (1/3) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 min-h-0">
-          <RevenueChart data={chartData} loading={loading} />
-        </div>
-        <div className="min-h-0">
-          <ActivityFeed items={activity} loading={loading} />
-        </div>
-      </div>
-
-      {/* Scheduled posts (1/2) + Creator progress (1/2) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ScheduledPostsCard posts={scheduledPosts} loading={loading} />
-        <CreatorProgressCard goals={goals} loading={loading} />
-      </div>
+      {/*
+        Revenue/activity/scheduled-posts/creator-goals widgets used to render
+        here, backed by a hook that defaulted to fabricated mock numbers
+        unless an env var was explicitly set to disable it. The backend
+        endpoint behind the "real" path only ever returned hardcoded zeros,
+        so there was no honest data to show either way. Removed rather than
+        left showing fake or meaningless-zero numbers.
+      */}
+      <ComingSoonNotice
+        feature="Revenue & activity dashboard"
+        description="Revenue, activity, scheduled posts, and creator-goal widgets aren't backed by real data yet — they previously showed fabricated numbers and have been removed rather than left misleading."
+      />
     </div>
   );
 }

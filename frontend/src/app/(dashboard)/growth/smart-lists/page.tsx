@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button } from '@/components/ui';
+import { Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, Users, TrendingUp, DollarSign, Send } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -46,10 +46,15 @@ export default function SmartListsPage() {
             Automatically segmented fan lists for targeted messaging campaigns
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           New list
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Smart lists"
+        description="Fan segmentation isn't implemented — there is no Fan data model yet, so these segments cannot reflect real fans."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

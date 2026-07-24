@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge } from '@/components/ui';
+import { Badge, ComingSoonNotice } from '@/components/ui';
 import { Lock, DollarSign, Eye, BarChart3, Zap, Star } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -48,6 +48,11 @@ export default function VaultProPage() {
       <p className="text-sm text-text-muted -mt-2">
         Enhanced vault analytics — see exactly which locked content earns the most
       </p>
+
+      <ComingSoonNotice
+        feature="Vault Pro analytics"
+        description="Per-item pricing, unlocks, and revenue aren't tracked — the real Media model has no such fields yet. Everything below is illustrative."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, Copy, Link2, TrendingUp, Users, DollarSign } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 
@@ -62,10 +62,15 @@ export default function FreeTrialLinksPage() {
             Generate and track free trial subscription links for each campaign
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           Create link
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Free trial links"
+        description="Link creation, click tracking, and conversion/revenue attribution aren't implemented — the data below is illustrative."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

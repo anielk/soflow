@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge } from '@/components/ui';
+import { Avatar, Badge, ComingSoonNotice } from '@/components/ui';
 import { TrendingUp, Users, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { MOCK_CREATORS } from '@/lib/mock-creators';
@@ -33,6 +33,11 @@ export default function CreatorReportsPage() {
         <h1 className="text-xl font-semibold text-text-primary">Creator reports</h1>
         <p className="mt-1 text-sm text-text-muted">Revenue and performance breakdown by creator</p>
       </div>
+
+      <ComingSoonNotice
+        feature="Creator analytics"
+        description="This report isn't wired to real data — the figures below come from example creators, not your actual Creator records."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

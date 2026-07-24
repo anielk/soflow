@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge, Button } from '@/components/ui';
+import { Avatar, Badge, Button, ComingSoonNotice } from '@/components/ui';
 import {
   UserPlus, Search, ChevronUp, ChevronDown,
   MessageSquare, TrendingUp, Users, Clock,
@@ -83,11 +83,16 @@ export default function EmployeesPage() {
           <Button variant="secondary" size="md" onClick={() => router.push('/employees/schedule')}>
             View schedule
           </Button>
-          <Button variant="primary" size="md" icon={UserPlus}>
+          <Button variant="primary" size="md" icon={UserPlus} disabled>
             Add employee
           </Button>
         </div>
       </div>
+
+      <ComingSoonNotice
+        feature="Employee performance tracking"
+        description="Everything below (messages, revenue, response time) is example data — this page isn't connected to any backend. To actually invite a real teammate to your workspace, use Settings → Members instead."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

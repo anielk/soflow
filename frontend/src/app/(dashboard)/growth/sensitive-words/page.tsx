@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, ComingSoonNotice } from '@/components/ui';
 import { X, Plus, ShieldAlert, AlertCircle } from 'lucide-react';
 
 type WordCategory = 'competitors' | 'platform_rules' | 'custom';
@@ -76,6 +76,10 @@ export default function SensitiveWordsPage() {
         </p>
       </div>
 
+      <ComingSoonNotice
+        feature="Sensitive words"
+        description="Words are not actually flagged in any outgoing message yet — this list only exists in this page's local state and resets on reload."
+      />
       {/* Info */}
       <div className="bg-warning/5 border border-warning/20 rounded-xl px-4 py-3.5 flex items-start gap-3">
         <AlertCircle size={14} className="text-warning-text mt-0.5 shrink-0" />
@@ -164,7 +168,7 @@ export default function SensitiveWordsPage() {
 
       {/* Save */}
       <div className="flex justify-end">
-        <Button variant="primary" size="md">Save word list</Button>
+        <Button variant="primary" size="md" disabled>Save word list (not implemented)</Button>
       </div>
     </div>
   );

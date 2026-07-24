@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Search, Users, Heart, Send } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
@@ -61,6 +61,11 @@ export default function S4SDiscoverPage() {
           Find creators to collaborate with through share for share promotions
         </p>
       </div>
+
+      <ComingSoonNotice
+        feature="S4S discovery"
+        description="These creator cards are examples, not real Leinaflow workspaces — there is no S4S backend yet, so 'Request S4S' only updates this page's local state."
+      />
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">

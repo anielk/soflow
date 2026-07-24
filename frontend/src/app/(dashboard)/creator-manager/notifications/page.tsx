@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge, Button } from '@/components/ui';
+import { Avatar, Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Heart, DollarSign, Users, MessageCircle, RefreshCw, ShoppingBag, BellOff } from 'lucide-react';
 import { formatCurrency, relativeTime } from '@/lib/format';
 import type { Notification, NotifType } from '@/types/workspace';
@@ -78,6 +78,11 @@ export default function NotificationsPage() {
           </Button>
         )}
       </div>
+
+      <ComingSoonNotice
+        feature="Fan notifications"
+        description="There is no Notification data model for fan activity (likes/tips/subscriptions) yet — this list is example data and resets on reload. This is unrelated to the real, working outbound-email system under Admin → Communication."
+      />
 
       {/* Card */}
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl overflow-hidden">

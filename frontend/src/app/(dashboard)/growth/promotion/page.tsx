@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, TrendingUp, Users, ExternalLink, ToggleRight } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
@@ -52,10 +52,15 @@ export default function ProfilePromotionPage() {
             Manage and track cross-platform promotional activity
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           Add promotion
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Profile promotion"
+        description="Cross-platform click/conversion tracking isn't implemented — the toggles below only change local UI state and the figures are illustrative."
+      />
 
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">

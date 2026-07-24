@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar } from '@/components/ui';
+import { Avatar, ComingSoonNotice } from '@/components/ui';
 import { CheckCircle2, XCircle, Wifi, Info } from 'lucide-react';
 import { relativeTime } from '@/lib/format';
 import { MOCK_CREATORS } from '@/lib/mock-creators';
@@ -25,6 +25,11 @@ export default function CustomProxyPage() {
           Route each creator&apos;s platform traffic through a dedicated IP address.
         </p>
       </div>
+
+      <ComingSoonNotice
+        feature="Custom proxy"
+        description="Proxy configuration isn't implemented — there is no such field on the real Creator model. The creators listed below are example data, not your actual workspace's creators."
+      />
 
       {/* Info card */}
       <div className="bg-violet-600/[0.07] border border-violet-600/20 rounded-xl px-4 py-3.5 flex items-start gap-3">

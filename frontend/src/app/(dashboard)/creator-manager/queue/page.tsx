@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { FilePlus, Search, ChevronUp, ChevronDown, CalendarClock, ImageIcon, Video } from 'lucide-react';
 import { timeUntil } from '@/lib/format';
 import type { Post, PostType, MediaType } from '@/types/workspace';
@@ -100,6 +100,11 @@ export default function QueuePage() {
           Add to queue
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Publishing queue"
+        description="There is no Post data model or scheduling backend yet — the posts below are examples, not real scheduled content."
+      />
 
       {/* Card */}
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl overflow-hidden">

@@ -5,6 +5,7 @@ export { Avatar }          from './Avatar';
 export { Input, Textarea } from './Input';
 export { Skeleton, TextSkeleton, StatCardSkeleton } from './LoadingSkeleton';
 export { EmptyState }      from './EmptyState';
+export { ComingSoonNotice } from './ComingSoonNotice';
 export { Tooltip }         from './Tooltip';
 export { Modal }           from './Modal';
 export { ToastProvider, useToast } from './Toast';

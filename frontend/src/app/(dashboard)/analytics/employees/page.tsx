@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Avatar, Badge } from '@/components/ui';
+import { Avatar, Badge, ComingSoonNotice } from '@/components/ui';
 import { MessageSquare, TrendingUp, Clock, Users } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
 import { MOCK_EMPLOYEES } from '@/lib/mock-employees';
@@ -38,6 +38,11 @@ export default function EmployeeReportsPage() {
         <h1 className="text-xl font-semibold text-text-primary">Employee reports</h1>
         <p className="mt-1 text-sm text-text-muted">Productivity and revenue metrics by team member</p>
       </div>
+
+      <ComingSoonNotice
+        feature="Employee analytics"
+        description="This report isn't wired to real data — figures come from example employees, unrelated to your real workspace members."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

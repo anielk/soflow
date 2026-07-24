@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import { Users, TrendingDown, DollarSign, Heart } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/format';
+import { ComingSoonNotice } from '@/components/ui';
 
 const MOCK_SEGMENTS = [
   { name: 'High spenders',       count: 312,  avgSpend: 187, churnRisk: 'Low',    newThisMonth: 24, color: '#10B981' },
@@ -46,6 +47,11 @@ export default function FanReportsPage() {
         <h1 className="text-xl font-semibold text-text-primary">Fan reports</h1>
         <p className="mt-1 text-sm text-text-muted">Subscriber segmentation and lifetime value analysis</p>
       </div>
+
+      <ComingSoonNotice
+        feature="Fan analytics"
+        description="There is no Fan data model in Leinaflow yet — every segment and number below is a hardcoded example."
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

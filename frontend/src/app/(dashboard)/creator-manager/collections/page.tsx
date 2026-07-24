@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { Plus, Search, ImageIcon, Lock, FolderOpen } from 'lucide-react';
 import { relativeTime } from '@/lib/format';
 import type { Collection } from '@/types/workspace';
@@ -56,10 +56,15 @@ export default function CollectionsPage() {
             Bundle content into purchasable collections for fans.
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           New collection
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Content collections"
+        description="There is no Collection data model yet — the collections below are examples, not real bundles of your media."
+      />
 
       {/* Search */}
       <div className="flex items-center gap-2 px-3 h-9 bg-bg-surface border border-bg-border/60 rounded-lg max-w-sm">
@@ -152,8 +157,8 @@ export default function CollectionsPage() {
           {/* Create new card */}
           <button
             type="button"
-            className="bg-bg-surface border border-dashed border-bg-border/60 rounded-xl h-[220px] flex flex-col items-center justify-center gap-3 hover:border-violet-600/50 hover:bg-violet-600/[0.04] transition-colors duration-150 text-center px-6"
-            onClick={() => {}}
+            disabled
+            className="bg-bg-surface border border-dashed border-bg-border/60 rounded-xl h-[220px] flex flex-col items-center justify-center gap-3 text-center px-6 opacity-60 cursor-not-allowed"
           >
             <div className="w-10 h-10 rounded-xl bg-bg-overlay flex items-center justify-center">
               <Plus size={18} className="text-text-muted" />

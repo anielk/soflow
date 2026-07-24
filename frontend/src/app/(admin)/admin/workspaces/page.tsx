@@ -1,6 +1,7 @@
 'use client';
 
 import { Layers, Plus, Search } from 'lucide-react';
+import { ComingSoonNotice } from '@/components/ui';
 
 export default function AdminWorkspacesPage() {
   return (
@@ -12,12 +13,18 @@ export default function AdminWorkspacesPage() {
         </div>
         <button
           type="button"
-          className="flex items-center gap-2 px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+          disabled
+          className="flex items-center gap-2 px-3.5 py-2 bg-violet-600/40 text-white/60 text-sm font-medium rounded-lg cursor-not-allowed"
         >
           <Plus size={14} />
           New workspace
         </button>
       </div>
+
+      <ComingSoonNotice
+        feature="Platform-wide workspace management"
+        description="There is no admin endpoint to list all workspaces yet — each user already manages their own workspace under Settings. This page is a placeholder for a future cross-workspace admin view."
+      />
 
       <div className="relative">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-disabled" />

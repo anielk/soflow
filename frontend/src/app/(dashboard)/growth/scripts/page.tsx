@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, ComingSoonNotice } from '@/components/ui';
 import { Plus, Copy, Edit3, FileText, Search } from 'lucide-react';
 
 type ScriptCategory = 'welcome' | 'ppv_upsell' | 'tip_request' | 'renewal' | 'follow_up' | 'custom';
@@ -70,10 +70,15 @@ export default function ScriptsPage() {
             Reusable message templates for fan conversations
           </p>
         </div>
-        <Button variant="primary" size="md" icon={Plus}>
+        <Button variant="primary" size="md" icon={Plus} disabled>
           New script
         </Button>
       </div>
+
+      <ComingSoonNotice
+        feature="Scripts"
+        description="Script creation/editing and real usage counts aren't implemented — the templates below are examples, not saved data."
+      />
 
       {/* Filters */}
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
