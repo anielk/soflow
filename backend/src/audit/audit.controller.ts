@@ -15,14 +15,24 @@ export class AuditController {
     }
   }
 
+  /**
+   * A SUPER_ADMIN gets the unrestricted, all-workspaces view (used by the
+   * System admin page). Anyone else can still query — e.g. a Creator
+   * detail page's Audit tab — but their `workspaceId` is always overridden
+   * to their own resolved workspace, never whatever the client sent, so a
+   * regular member can only ever see their own workspace's history.
+   */
   @Get()
-  findMany(@Query() query: QueryAuditLogDto, @Req() req: any) {
-    this.assertSuperAdmin(req);
+  async findMany(@Query() query: QueryAuditLogDto, @Req() req: any) {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const workspaceId = isSuperAdmin ? query.workspaceId : await this.auditService.resolveOwnWorkspaceId(req.user.userId);
     return this.auditService.findMany({
-      workspaceId: query.workspaceId,
+      workspaceId,
       userId: query.userId,
       category: query.category,
       eventType: query.eventType,
+      targetId: query.targetId,
+      targetType: query.targetType,
       search: query.search,
       dateFrom: query.dateFrom ? new Date(query.dateFrom) : undefined,
       dateTo: query.dateTo ? new Date(query.dateTo) : undefined,

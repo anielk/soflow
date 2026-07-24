@@ -27,8 +27,8 @@ export class MediaController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
-  upload(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
-    return this.mediaService.upload(file, req.user.userId);
+  upload(@UploadedFile() file: Express.Multer.File, @Body('creatorId') creatorId: string | undefined, @Req() req: any) {
+    return this.mediaService.upload(file, req.user.userId, creatorId || undefined);
   }
 
   @Get()

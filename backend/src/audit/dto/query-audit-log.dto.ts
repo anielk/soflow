@@ -19,6 +19,15 @@ export class QueryAuditLogDto {
   @IsString()
   eventType?: string;
 
+  /** Scope to one entity's history, e.g. a single Creator's audit trail. */
+  @IsOptional()
+  @IsString()
+  targetId?: string;
+
+  @IsOptional()
+  @IsString()
+  targetType?: string;
+
   @IsOptional()
   @IsString()
   search?: string;

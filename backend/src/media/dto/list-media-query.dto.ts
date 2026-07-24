@@ -11,6 +11,11 @@ export class ListMediaQueryDto {
   @IsEnum(MediaType)
   type?: MediaType;
 
+  /** Scope to one creator's media. Omit to see the whole workspace's general library. */
+  @IsOptional()
+  @IsString()
+  creatorId?: string;
+
   @IsOptional()
   @IsIn(['createdAt', 'filename', 'sizeBytes'])
   sortBy?: 'createdAt' | 'filename' | 'sizeBytes' = 'createdAt';

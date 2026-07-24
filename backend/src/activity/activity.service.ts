@@ -6,6 +6,8 @@ import { EVENT_CATEGORIES } from '../events/event-types';
 
 export interface ActivityLogFilters {
   workspaceId?: string;
+  targetId?: string;
+  targetType?: string;
   page?: number;
   limit?: number;
 }
@@ -22,6 +24,13 @@ export class ActivityService {
   private readonly logger = new Logger(ActivityService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /** Same pattern as AuditService.resolveOwnWorkspaceId — see its comment. */
+  async resolveOwnWorkspaceId(userId: string): Promise<string> {
+    const membership = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
+    if (!membership) throw new Error('User is not a member of any workspace.');
+    return membership.workspaceId;
+  }
 
   async record(event: SystemEvent): Promise<void> {
     if (!event.message) return;
@@ -45,7 +54,11 @@ export class ActivityService {
   async findMany(filters: ActivityLogFilters) {
     const page = filters.page ?? 1;
     const limit = Math.min(filters.limit ?? 25, 100);
-    const where: Prisma.ActivityLogWhereInput = filters.workspaceId ? { workspaceId: filters.workspaceId } : {};
+    const where: Prisma.ActivityLogWhereInput = {
+      ...(filters.workspaceId ? { workspaceId: filters.workspaceId } : {}),
+      ...(filters.targetId ? { targetId: filters.targetId } : {}),
+      ...(filters.targetType ? { targetType: filters.targetType } : {}),
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.activityLog.findMany({

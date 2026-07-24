@@ -6,6 +6,15 @@ export class QueryActivityLogDto {
   @IsString()
   workspaceId?: string;
 
+  /** Scope to one entity's history, e.g. a single Creator's activity feed. */
+  @IsOptional()
+  @IsString()
+  targetId?: string;
+
+  @IsOptional()
+  @IsString()
+  targetType?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

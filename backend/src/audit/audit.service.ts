@@ -9,6 +9,8 @@ export interface AuditLogFilters {
   userId?: string;
   category?: AuditCategory;
   eventType?: string;
+  targetId?: string;
+  targetType?: string;
   search?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -32,6 +34,18 @@ export class AuditService {
   private readonly logger = new Logger(AuditService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Duplicated small helper (same pattern as WorkspaceService/MediaService,
+   * see their comments for why) — lets a non-SUPER_ADMIN caller query their
+   * own workspace's history (e.g. a Creator detail page's Audit tab)
+   * without granting them the unrestricted, all-workspaces admin view.
+   */
+  async resolveOwnWorkspaceId(userId: string): Promise<string> {
+    const membership = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
+    if (!membership) throw new Error('User is not a member of any workspace.');
+    return membership.workspaceId;
+  }
 
   async record(event: SystemEvent): Promise<void> {
     try {
@@ -94,6 +108,8 @@ export class AuditService {
     if (filters.userId) where.userId = filters.userId;
     if (filters.category) where.category = filters.category;
     if (filters.eventType) where.eventType = filters.eventType;
+    if (filters.targetId) where.targetId = filters.targetId;
+    if (filters.targetType) where.targetType = filters.targetType;
     if (filters.dateFrom || filters.dateTo) {
       where.createdAt = {
         ...(filters.dateFrom ? { gte: filters.dateFrom } : {}),

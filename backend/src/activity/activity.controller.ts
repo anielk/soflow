@@ -1,4 +1,4 @@
-import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ActivityService } from './activity.service';
 import { QueryActivityLogDto } from './dto/query-activity-log.dto';
@@ -8,14 +8,22 @@ import { QueryActivityLogDto } from './dto/query-activity-log.dto';
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
+  /**
+   * A SUPER_ADMIN gets the unrestricted, all-workspaces view (System admin
+   * page). Anyone else — e.g. a Creator detail page's Activity tab — always
+   * has `workspaceId` overridden to their own resolved workspace, never
+   * whatever the client sent.
+   */
   @Get()
-  findMany(@Query() query: QueryActivityLogDto, @Req() req: any) {
-    // Admin-only for now (surfaced under the System admin section this
-    // sprint). A workspace-scoped "your team's activity" view for regular
-    // members is a natural next step, not built here.
-    if (req.user?.role !== 'SUPER_ADMIN') {
-      throw new ForbiddenException('Only a super admin can view the activity log.');
-    }
-    return this.activityService.findMany({ workspaceId: query.workspaceId, page: query.page, limit: query.limit });
+  async findMany(@Query() query: QueryActivityLogDto, @Req() req: any) {
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+    const workspaceId = isSuperAdmin ? query.workspaceId : await this.activityService.resolveOwnWorkspaceId(req.user.userId);
+    return this.activityService.findMany({
+      workspaceId,
+      targetId: query.targetId,
+      targetType: query.targetType,
+      page: query.page,
+      limit: query.limit,
+    });
   }
 }

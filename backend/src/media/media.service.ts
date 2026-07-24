@@ -23,6 +23,7 @@ export interface MediaResponse {
   ownerId: string;
   ownerName: string | null;
   ownerEmail: string;
+  creatorId: string | null;
   filename: string;
   originalFilename: string;
   mimeType: string;
@@ -77,9 +78,9 @@ export class MediaService {
     return { workspaceId: membership.workspaceId, role: membership.role };
   }
 
-  async upload(file: Express.Multer.File, userId: string): Promise<MediaResponse> {
+  async upload(file: Express.Multer.File, userId: string, creatorId?: string): Promise<MediaResponse> {
     try {
-      return await this.processUpload(file, userId);
+      return await this.processUpload(file, userId, creatorId);
     } catch (err) {
       // Multer has already staged the file in .tmp by the time this method
       // runs, regardless of where processing fails (workspace resolution,
@@ -91,8 +92,9 @@ export class MediaService {
     }
   }
 
-  private async processUpload(file: Express.Multer.File, userId: string): Promise<MediaResponse> {
+  private async processUpload(file: Express.Multer.File, userId: string, creatorId?: string): Promise<MediaResponse> {
     const workspaceId = await this.resolveWorkspaceId(userId);
+    if (creatorId) await this.assertCreatorInWorkspace(workspaceId, creatorId);
     const validated = await validateUploadedFile(file.originalname, file.path);
 
     const safeFilename = `${randomUUID()}.${validated.extension}`;
@@ -103,6 +105,7 @@ export class MediaService {
       data: {
         workspaceId,
         ownerId: userId,
+        creatorId: creatorId ?? null,
         filename: safeFilename,
         originalFilename: file.originalname,
         mimeType: validated.mimeType,
@@ -157,13 +160,21 @@ export class MediaService {
     return this.toResponse(updated);
   }
 
+  /** Throws NotFoundException rather than leaking whether a creator ID exists in a different workspace. */
+  private async assertCreatorInWorkspace(workspaceId: string, creatorId: string): Promise<void> {
+    const creator = await this.prisma.creator.findFirst({ where: { id: creatorId, workspaceId }, select: { id: true } });
+    if (!creator) throw new NotFoundException('Creator not found');
+  }
+
   async list(userId: string, query: ListMediaQueryDto) {
     const workspaceId = await this.resolveWorkspaceId(userId);
+    if (query.creatorId) await this.assertCreatorInWorkspace(workspaceId, query.creatorId);
     const page = query.page ?? 1;
     const limit = query.limit ?? 60;
 
     const where: Prisma.MediaWhereInput = {
       workspaceId,
+      ...(query.creatorId ? { creatorId: query.creatorId } : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.search
         ? {
@@ -286,6 +297,7 @@ export class MediaService {
       ownerId: media.ownerId,
       ownerName: media.owner.name,
       ownerEmail: media.owner.email,
+      creatorId: media.creatorId,
       filename: media.filename,
       originalFilename: media.originalFilename,
       mimeType: media.mimeType,
