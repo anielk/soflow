@@ -6,6 +6,7 @@ import type {
   CreatorRecord,
   CreatorStats,
   CreatorStatus,
+  DashboardStats,
   LocaleOptions,
   NewWorkspaceMember,
   OnboardingStatus,
@@ -215,4 +216,18 @@ export async function listCreatorAuditLog(creatorId: string, limit = 25): Promis
   await throwOnError(response, 'Failed to load audit history');
   const data = (await response.json()) as { items: AuditLogItem[] };
   return data.items;
+}
+
+/** Workspace-wide activity (no targetId filter) — for the dashboard's Recent Activity widget. */
+export async function listWorkspaceActivity(limit = 8): Promise<ActivityLogItem[]> {
+  const response = await fetch(apiUrl(`/activity?limit=${limit}`), { headers: authHeaders(), cache: 'no-store' });
+  await throwOnError(response, 'Failed to load activity');
+  const data = (await response.json()) as { items: ActivityLogItem[] };
+  return data.items;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const response = await fetch(apiUrl('/dashboard/stats'), { headers: authHeaders(), cache: 'no-store' });
+  await throwOnError(response, 'Failed to load dashboard statistics');
+  return response.json();
 }

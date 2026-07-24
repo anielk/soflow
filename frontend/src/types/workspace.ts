@@ -149,6 +149,14 @@ export interface CreatorStats {
   storageBytes:  number;
 }
 
+export interface DashboardStats {
+  totalCreators:  number;
+  activeCreators: number;
+  mediaCount:     number;
+  storageBytes:   number;
+  memberCount:    number;
+}
+
 export interface ActivityLogItem {
   id:         string;
   workspaceId: string | null;
