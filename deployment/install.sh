@@ -13,7 +13,7 @@
 #                 layers compose.yml with its own overlay: compose.dev.yml,
 #                 compose.demo.yml, or compose.prod.yml (demo/production are
 #                 functionally identical — see docs/deployment/Architecture.md).
-#   -y, --yes     Non-interactive: accept all prompts (for CPOS/scripted runs).
+#   -y, --yes     Non-interactive: accept all prompts (for COC/scripted runs).
 #   --seed        Force-run the database seed even on production.
 #   --no-seed     Skip seeding even on development/demo.
 #                 (default: seed on development/demo, skip on production —
@@ -93,12 +93,14 @@ print_summary() {
   echo "  Backend API:   ${backend_url}"
   echo "  Backups dir:   ${BACKUP_DIR}"
   echo "  Compose files: $(compose_files)"
+  echo "  Server id:     ${DEPLOYMENT_DIR}/server.json"
   echo
   dc ps
   echo
   echo "Next steps:"
   echo "  - deployment/healthcheck.sh --env ${DEPLOY_ENV}   # re-check health any time"
   echo "  - deployment/backup.sh --env ${DEPLOY_ENV}        # take a backup"
+  echo "  - deployment/status.sh --env ${DEPLOY_ENV}        # snapshot commit/health/version"
   echo "  - docs/Deployment.md                              # full reference"
 }
 
@@ -180,5 +182,9 @@ wait_for_http_ok frontend "http://localhost:3000" 90 || log_warn "Frontend did n
 
 log_step "15. Verifying installation"
 "${DEPLOYMENT_DIR}/healthcheck.sh" --env "${DEPLOY_ENV}"
+
+log_step "16. Recording server identity"
+ensure_server_identity
+log_ok "Wrote ${DEPLOYMENT_DIR}/server.json (see docs/COC-Integration.md#server-discovery)"
 
 print_summary

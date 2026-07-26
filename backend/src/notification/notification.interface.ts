@@ -1,6 +1,7 @@
 /**
  * Every notification channel (SMTP today; Teams, Slack, Discord, push, SMS,
- * CPOS alerts later) implements this same contract. Nothing outside this
+ * Cloudivo Operations Center (COC) alerts later) implements this same
+ * contract. Nothing outside this
  * module should ever import a concrete provider directly — always depend on
  * NotificationService.
  */

@@ -3,7 +3,7 @@
 #
 # Usage:
 #   deployment/restore.sh [--env development|demo|production]
-#   deployment/restore.sh --backup backups/2026-07-02-1500 --yes   # non-interactive/CPOS
+#   deployment/restore.sh --backup backups/2026-07-02-1500 --yes   # non-interactive/COC
 #   deployment/restore.sh --dry-run [--backup <dir>]               # show the plan, touch nothing
 #
 # This is destructive (overwrites the current database and media storage),

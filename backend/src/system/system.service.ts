@@ -23,8 +23,9 @@ export interface InstalledModule {
 
 /**
  * Read-only platform metadata — the "System Version" / "Installed Modules"
- * CPOS will later poll. Nothing here is secret (no credentials, no
- * connection strings) so it's safe to expose to any authenticated admin.
+ * the Cloudivo Operations Center (COC) will later poll. Nothing here is
+ * secret (no credentials, no connection strings) so it's safe to expose to
+ * any authenticated admin.
  */
 @Injectable()
 export class SystemService {

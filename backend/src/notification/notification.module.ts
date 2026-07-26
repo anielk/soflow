@@ -7,7 +7,7 @@ import { NotificationController } from './notification.controller';
 
 /**
  * Wires NOTIFICATION_DRIVER to a concrete NotificationProvider. Only "smtp"
- * is implemented today. Adding teams/slack/discord/push/sms/cpos later is a
+ * is implemented today. Adding teams/slack/discord/push/sms/coc later is a
  * new provider class implementing NotificationProvider plus one new case
  * here — no other module needs to change.
  */

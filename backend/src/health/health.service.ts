@@ -31,10 +31,11 @@ const STATUS_SEVERITY: Record<HealthStatus, number> = {
 /**
  * Every check here is real — no fake "ok" placeholders for things that are
  * actually implemented. Checks with nothing to test yet (AI, the future
- * Cloudivo SMTP server, external storage, CPOS) are reported as `planned`
- * so CPOS can later render "not built yet" rather than a false negative.
+ * Cloudivo SMTP server, external storage, the Cloudivo Operations Center
+ * (COC)) are reported as `planned` so COC can later render "not built yet"
+ * rather than a false negative.
  *
- * This is the foundation CPOS will poll (see the CPOS preparation notes in
+ * This is the foundation COC will poll (see the COC preparation notes in
  * Sprint 5D's report) — the shape of HealthReport is the contract, not this
  * sprint's HTTP transport.
  */
@@ -120,7 +121,7 @@ export class HealthService {
       { name: 'ai', status: 'planned', message: 'No AI provider is wired up to check yet.' },
       { name: 'smtp_server', status: 'planned', message: 'Will check smtp.cloudivo.com once that service exists.' },
       { name: 'external_storage', status: 'planned', message: 'Only the local storage driver is implemented today.' },
-      { name: 'cpos', status: 'planned', message: 'CPOS does not exist yet — this sprint only prepares the data it will consume.' },
+      { name: 'coc', status: 'planned', message: 'COC does not exist yet — this sprint only prepares the data it will consume.' },
     ];
   }
 }

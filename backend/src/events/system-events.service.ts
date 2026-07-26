@@ -8,7 +8,8 @@ import { SYSTEM_EVENT_CHANNEL, SystemEvent } from './system-event.interface';
  * are independent listeners (see AuditEventListener / ActivityEventListener)
  * that happen to be interested in the same channel. A future module can
  * subscribe to the exact same events (e.g. a real-time websocket feed, a
- * future CPOS relay) without this service or any publisher changing.
+ * future Cloudivo Operations Center (COC) relay) without this service or
+ * any publisher changing.
  *
  * `EventEmitter2.emit()` is synchronous but fire-and-forget: it invokes
  * listeners in-process without the caller awaiting their work, so a slow or

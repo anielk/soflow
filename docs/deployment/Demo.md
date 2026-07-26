@@ -15,10 +15,11 @@ docker compose -f compose.yml -f compose.demo.yml up -d --build
 `--build` matters here — unlike development, there's no bind mount to pick
 up source changes; a new deploy means a new image build.
 
-Prefer `deployment/install.sh --env demo` / `deployment/update.sh --env demo`
-over calling `docker compose` directly on a real host — they also handle
-Prisma migrations, seeding, and health verification. See
-[../Deployment.md](../Deployment.md).
+Prefer `deployment/install.sh --env demo` (first install) /
+`deployment/deploy.sh --env demo` (subsequent releases) over calling
+`docker compose` directly on a real host — they also handle Prisma
+migrations, seeding, health verification, and (for `deploy.sh`) a real HTTP
+smoke test through nginx. See [../Deployment.md](../Deployment.md).
 
 ## What's running
 

@@ -257,7 +257,8 @@ enum AuditCategory {
   SYSTEM
 }
 
-// Structured, append-only trail for administrators/CPOS. Never updated or
+// Structured, append-only trail for administrators and the Cloudivo
+// Operations Center (COC). Never updated or
 // deleted by the application — see AuditService for the write path (it's the
 // only writer) and audit.controller.ts for the read-only query surface.
 model AuditLog {

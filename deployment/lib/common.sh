@@ -5,7 +5,7 @@
 #   source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 #
 # It centralizes everything every deployment script needs so behavior (env
-# resolution, compose invocation, logging, non-interactive/CPOS support)
+# resolution, compose invocation, logging, non-interactive/COC support)
 # stays identical across install/update/backup/restore/healthcheck/uninstall.
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -27,6 +27,16 @@ PROJECT_NAME="$(grep -m1 '^PROJECT_NAME=' "${PROJECT_ROOT}/.env" 2>/dev/null | c
 RESOURCE_PREFIX="${PROJECT_NAME:-creator}"
 export PROJECT_NAME RESOURCE_PREFIX
 
+# DEPLOYMENT_ENGINE_VERSION / SCHEMA_VERSION — identify, respectively, this
+# deployment tooling's own version (deploy.sh/rollback.sh/status.sh — see
+# docs/COC-Integration.md) and the shape of the JSON these scripts emit.
+# Both are embedded in every --json output and in deployment/server.json so
+# the future Cloudivo Operations Center (COC) can tell tooling versions and
+# payload shapes apart across hosts running different Leinaflow versions.
+DEPLOYMENT_ENGINE_VERSION="1.0"
+SCHEMA_VERSION="1.0"
+export DEPLOYMENT_ENGINE_VERSION SCHEMA_VERSION
+
 # ── Output ───────────────────────────────────────────────────────────────
 
 if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -42,12 +52,187 @@ log_warn() { printf '%s[WARN]%s %s\n' "${COLOR_YELLOW}" "${COLOR_RESET}" "$*" >&
 log_err()  { printf '%s[FAIL]%s %s\n' "${COLOR_RED}" "${COLOR_RESET}" "$*" >&2; }
 log_step() { printf '\n%s%s%s\n' "${COLOR_BOLD}" "$*" "${COLOR_RESET}"; }
 
-# ── Non-interactive / CPOS support ──────────────────────────────────────
+# format_duration <seconds> — human-readable elapsed time, e.g. "1m 30s".
+# Shared by deploy.sh/rollback.sh (printed to the operator) and history.sh
+# (rendering the raw seconds stored in deployment/.deploy-history.log).
+format_duration() {
+  local total="$1" h m s
+  h=$((total / 3600)); m=$(((total % 3600) / 60)); s=$((total % 60))
+  if [[ "${h}" -gt 0 ]]; then printf '%dh %dm %ds' "${h}" "${m}" "${s}"
+  elif [[ "${m}" -gt 0 ]]; then printf '%dm %ds' "${m}" "${s}"
+  else printf '%ds' "${s}"
+  fi
+}
+
+# ── JSON output (shared by deploy.sh/rollback.sh/status.sh/history.sh --json) ──
+#
+# Every script's --json output is built by hand with printf, not a JSON
+# library — deployment scripts can't assume jq is installed on every host
+# (only bootstrap.sh's package list guarantees it — see
+# bootstrap/02-install-packages.sh). json_escape is what keeps that safe:
+# every value that can contain arbitrary text (commit subjects, error
+# messages, hostnames) must be passed through it before going inside quotes.
+
+# json_escape <string> — escapes backslash, double-quote and control chars
+# for embedding as a JSON string value. Does not add the surrounding quotes.
+json_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\r'/}"
+  s="${s//$'\n'/\\n}"
+  printf '%s' "${s}"
+}
+
+# read_app_version — Leinaflow's version, from backend/package.json's
+# "version" field (the same value backend's own /v1/system/version
+# endpoint reports — see SystemService.readAppVersion). Prefers jq when
+# available, falls back to grep/sed otherwise — same pattern already used
+# by bootstrap/09-summary.sh, so this doesn't newly require jq on a host
+# that wasn't provisioned via bootstrap.sh.
+read_app_version() {
+  local pkg="${PROJECT_ROOT}/backend/package.json"
+  [[ -f "${pkg}" ]] || { echo "unknown"; return; }
+  if command -v jq >/dev/null 2>&1; then
+    jq -r '.version // "unknown"' "${pkg}" 2>/dev/null || echo "unknown"
+  else
+    grep -m1 '"version"' "${pkg}" 2>/dev/null | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/' || echo "unknown"
+  fi
+}
+
+# ── Server identity (deployment/server.json) ─────────────────────────────
+#
+# See docs/COC-Integration.md#server-discovery. server.json is host-local
+# (gitignored, like .deploy-history.log) — it's how the future Cloudivo
+# Operations Center (COC) will eventually discover and recognize a running
+# install without any of this being wired up yet.
+
+# generate_server_id — a stable per-host identifier. Prefers uuidgen; falls
+# back to formatting generate_secret's random hex into the same shape so a
+# host without uuidgen (not installed by bootstrap.sh, only by convention on
+# most distros) still gets a usable id.
+generate_server_id() {
+  if command -v uuidgen >/dev/null 2>&1; then
+    uuidgen
+  else
+    local hex; hex="$(generate_secret | cut -c1-32)"
+    printf '%s-%s-%s-%s-%s\n' "${hex:0:8}" "${hex:8:4}" "${hex:12:4}" "${hex:16:4}" "${hex:20:12}"
+  fi
+}
+
+# ensure_server_identity — creates deployment/server.json on first call
+# (generating and permanently fixing serverId, the same "generate once,
+# never touch again" approach as JWT_SECRET/SESSION_SECRET — see
+# ensure_env_files), then refreshes it every time it's called after that so
+# version/environment/hostname always reflect what's actually running.
+# Called by install.sh (creation) and deploy.sh/rollback.sh (refresh after
+# every successful run) — never fails the caller's script if it can't write
+# the file (host-local convenience data, not part of the deploy contract).
+ensure_server_identity() {
+  local file="${DEPLOYMENT_DIR}/server.json" server_id=""
+  if [[ -f "${file}" ]]; then
+    if command -v jq >/dev/null 2>&1; then
+      server_id="$(jq -r '.serverId // empty' "${file}" 2>/dev/null)"
+    else
+      server_id="$(grep -m1 '"serverId"' "${file}" 2>/dev/null | sed -E 's/.*"serverId"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
+    fi
+  fi
+  [[ -n "${server_id}" ]] || server_id="$(generate_server_id)"
+
+  printf '{\n  "serverId": "%s",\n  "environment": "%s",\n  "hostname": "%s",\n  "platform": "Leinaflow",\n  "version": "%s",\n  "deploymentEngine": "%s",\n  "updatedAt": "%s"\n}\n' \
+    "$(json_escape "${server_id}")" \
+    "$(json_escape "${DEPLOY_ENV}")" \
+    "$(json_escape "$(hostname 2>/dev/null || echo unknown)")" \
+    "$(json_escape "$(read_app_version)")" \
+    "${DEPLOYMENT_ENGINE_VERSION}" \
+    "$(date -Iseconds)" \
+    > "${file}" 2>/dev/null || true
+}
+
+# ── Deployment history (deployment/.deploy-history.log + history.json) ──
+#
+# .deploy-history.log stays exactly what it always was: a tab-separated,
+# append-only, host-local log — deploy.sh/rollback.sh only ever append a
+# line, never rewrite it. Columns (1-indexed, new ones added at the end so
+# awk/read scripts keyed on earlier column numbers don't need to change):
+#   1 timestamp  2 environment  3 commit  4 duration_seconds  5 status
+#   6 branch     7 from_commit (rollback only; empty otherwise)
+# history.json is a *derived* artifact regenerated from that log in full
+# every time sync_history_json runs — it's never appended to directly, so
+# there's no risk of ending up with invalid/partial JSON.
+
+# history_line_to_json <tab-separated-row> — converts one history-log row
+# into a single JSON object. Shared by sync_history_json (writes
+# deployment/history.json) and history.sh --json, so the two never drift.
+history_line_to_json() {
+  local line="$1" ts env commit duration status branch from_commit
+  IFS=$'\t' read -r ts env commit duration status branch from_commit <<< "${line}"
+  local is_rollback="false"
+  [[ "${status}" == "ROLLBACK" ]] && is_rollback="true"
+  local from_commit_json="null"
+  [[ -n "${from_commit}" ]] && from_commit_json="\"${from_commit}\""
+  printf '{"timestamp":"%s","environment":"%s","commit":"%s","commit_short":"%s","branch":"%s","duration_seconds":%s,"status":"%s","rollback":{"is_rollback":%s,"from_commit":%s}}' \
+    "$(json_escape "${ts}")" "$(json_escape "${env}")" "$(json_escape "${commit}")" "$(json_escape "${commit:0:12}")" \
+    "$(json_escape "${branch:-unknown}")" "${duration:-0}" "$(json_escape "${status}")" "${is_rollback}" "${from_commit_json}"
+}
+
+# sync_history_json — regenerates deployment/history.json from
+# deployment/.deploy-history.log in full. Called at the end of
+# record_history (deploy.sh) and its rollback.sh equivalent so the two
+# files can never drift out of sync with each other.
+sync_history_json() {
+  local history_file="${DEPLOYMENT_DIR}/.deploy-history.log" json_file="${DEPLOYMENT_DIR}/history.json"
+  {
+    if [[ ! -s "${history_file}" ]]; then
+      printf '[]\n'
+    else
+      printf '['
+      local first=1 line
+      while IFS= read -r line; do
+        [[ -z "${line}" ]] && continue
+        [[ "${first}" -eq 1 ]] && first=0 || printf ','
+        history_line_to_json "${line}"
+      done < "${history_file}"
+      printf ']\n'
+    fi
+  } > "${json_file}" 2>/dev/null || true
+}
+
+# fetch_backend_health_report [timeout] — fetches the backend's real
+# /v1/health JSON from inside its own container (works identically in
+# development/demo/production — no dependency on nginx or the host's
+# network, unlike the public /api/v1/health smoke test deploy.sh runs) and
+# prints it as: line 1 = overall status, line 2 = uptimeSeconds, then one
+# "name<TAB>status" line per check (see HealthReport in
+# backend/src/health/health.service.ts — this is that same contract).
+# Prints nothing (not an error) if the backend doesn't respond in time —
+# callers must treat empty output as "unknown", not "down".
+fetch_backend_health_report() {
+  local to="${1:-5}"
+  timeout "${to}" dc exec -T backend node -e "
+    require('http').get('http://localhost:4000/v1/health', (res) => {
+      let data = '';
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        try {
+          const r = JSON.parse(data);
+          console.log(r.status);
+          console.log(r.uptimeSeconds);
+          for (const c of (r.checks || [])) console.log(c.name + '\t' + c.status);
+        } catch (e) { process.exit(1); }
+      });
+    }).on('error', () => process.exit(1));
+  " 2>/dev/null || true
+}
+
+# ── Non-interactive / COC support ────────────────────────────────────────
 #
 # Every script exposes -y/--yes (sets ASSUME_YES=1) so it can run
 # unattended. confirm()/confirm_typed() are the only prompting primitives —
 # route all interactive checks through them so "run non-interactively" stays
-# a single, consistent contract for CPOS to rely on.
+# a single, consistent contract for the Cloudivo Operations Center (COC) to
+# rely on.
 
 ASSUME_YES="${ASSUME_YES:-0}"
 
@@ -166,10 +351,22 @@ detect_compose_cmd() {
 # dc <compose-subcommand-and-args...> — runs compose from the project root
 # with the -f flags for the resolved DEPLOY_ENV already applied.
 dc() {
+  # `trap - ERR` inside the subshell: callers (deploy.sh/rollback.sh) set
+  # `-E` so their own ERR trap reaches into functions like this one — but
+  # that same `-E` also makes it reach into this subshell, so without
+  # resetting it here a failing compose command fires the caller's ERR
+  # trap once *inside* the subshell (on its own exit) and once *again* in
+  # the caller when the subshell itself (as `dc`'s exit status) comes back
+  # non-zero — double-running on_error, double-logging, double-appending
+  # to the history log. Resetting it here means the failure still
+  # propagates (errexit still applies, and the subshell's exit status is
+  # still whatever the compose command returned) — it just only trips the
+  # trap once, in the caller, where it belongs.
+  #
   # Intentional word-splitting: COMPOSE ("docker compose") and compose_files
   # (multiple "-f <file>" pairs) are both meant to expand into several words.
   # shellcheck disable=SC2086,SC2046
-  (cd "${PROJECT_ROOT}" && ${COMPOSE} $(compose_files) "$@")
+  (trap - ERR; cd "${PROJECT_ROOT}" && ${COMPOSE} $(compose_files) "$@")
 }
 
 # service_running <name> — true if the given compose service has a running container.
@@ -203,6 +400,34 @@ wait_for_http_ok() {
     sleep 2
     waited=$((waited + 2))
   done
+  return 1
+}
+
+# wait_for_service_healthy <service> [timeout] — poll Docker's own
+# HEALTHCHECK status (not an HTTP check) until "healthy" or the timeout
+# elapses. Every service in compose.yml defines a healthcheck (postgres,
+# redis, backend, frontend, plus nginx in demo/prod — see
+# docs/deployment/Architecture.md#healthchecks), so this is the one thing
+# deploy.sh, rollback.sh and status.sh all need and none of the existing
+# scripts expose as a shared helper (install.sh has its own near-identical
+# local copy predating this one — not unified here to avoid touching a
+# working, unrelated script).
+wait_for_service_healthy() {
+  local service="$1" timeout="${2:-90}" waited=0 cid status
+  cid="$(dc ps -q "${service}" 2>/dev/null || true)"
+  if [[ -z "${cid}" ]]; then
+    log_err "${service}: container not found."
+    return 1
+  fi
+  while [[ "${waited}" -lt "${timeout}" ]]; do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}no-healthcheck{{end}}' "${cid}" 2>/dev/null || echo "unknown")"
+    if [[ "${status}" == "healthy" || "${status}" == "no-healthcheck" ]]; then
+      return 0
+    fi
+    sleep 2
+    waited=$((waited + 2))
+  done
+  log_err "${service}: did not become healthy within ${timeout}s (last status: ${status})."
   return 1
 }
 

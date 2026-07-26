@@ -4,7 +4,7 @@
 #
 # Usage: deployment/backup.sh [--env development|demo|production]
 # Prints the resulting backup directory path on the last line on success,
-# so callers (including CPOS) can capture it: `dir=$(deployment/backup.sh --env production | tail -1)`
+# so callers (including the Cloudivo Operations Center, COC) can capture it: `dir=$(deployment/backup.sh --env production | tail -1)`
 
 set -o errexit
 set -o nounset

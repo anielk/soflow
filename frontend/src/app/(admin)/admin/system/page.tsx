@@ -309,7 +309,7 @@ const STATUS_STYLE: Record<string, { label: string; cls: string; icon: LucideIco
 const CHECK_NAME_LABEL: Record<string, string> = {
   api: 'API',
   ai: 'AI',
-  cpos: 'CPOS',
+  coc: 'COC',
 };
 
 function checkLabel(name: string): string {
@@ -484,7 +484,7 @@ export default function SystemPage() {
       <div>
         <h1 className="text-xl font-semibold text-text-primary">System</h1>
         <p className="text-sm text-text-muted mt-0.5">
-          Observability and audit foundation — read-only, the groundwork CPOS will later consume.
+          Observability and audit foundation — read-only, the groundwork the Cloudivo Operations Center (COC) will later consume.
         </p>
       </div>
 

@@ -19,7 +19,7 @@
 #                      checkout. Defaults to the project's GitHub repo.
 #
 # See docs/Deployment.md's "Bootstrap" section for the full step table and
-# where CPOS will later call this script.
+# where the Cloudivo Operations Center (COC) will later call this script.
 
 set -o errexit
 set -o nounset

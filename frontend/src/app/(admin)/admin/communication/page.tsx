@@ -55,7 +55,7 @@ export default function CommunicationPage() {
         <p className="text-xs text-text-muted leading-relaxed">
           All outbound notifications go through <code className="text-violet-300">NotificationService</code>, which
           delegates to whichever <code className="text-violet-300">NotificationProvider</code> is configured. SMTP is
-          the only channel implemented today — Teams, Slack, Discord, push, SMS, and CPOS alerts can be added later as
+          the only channel implemented today — Teams, Slack, Discord, push, SMS, and Cloudivo Operations Center (COC) alerts can be added later as
           new providers without changing any call site. Moving to <code className="text-violet-300">smtp.cloudivo.com</code>{' '}
           later is a configuration change only.
         </p>

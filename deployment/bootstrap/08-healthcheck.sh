@@ -2,8 +2,9 @@
 # 08-healthcheck.sh — re-confirm the stack is healthy from bootstrap's own
 # numbered checklist. install.sh (the previous step) already verifies
 # health internally as its own last step; this gives bootstrap a distinctly
-# named, independently retriable step of its own — useful for CPOS, which
-# will want to know "did step 8 pass" separately from "did step 7 pass".
+# named, independently retriable step of its own — useful for the Cloudivo
+# Operations Center (COC), which will want to know "did step 8 pass"
+# separately from "did step 7 pass".
 
 set -o errexit
 set -o nounset
