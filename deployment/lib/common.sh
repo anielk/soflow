@@ -101,6 +101,28 @@ read_app_version() {
   fi
 }
 
+# detect_installed_environment — reads deployment/server.json's
+# "environment" field: this host's actual last-installed/deployed
+# environment (written by install.sh, refreshed by every successful
+# deploy.sh/rollback.sh run — see ensure_server_identity below). Used as
+# DEPLOY_ENV's default (see "Deployment environment" further down) instead
+# of a hardcoded guess, so a script invoked without --env (status.sh in
+# particular is routinely run that way, just to check on things) reports on
+# what this host actually is, not whatever the fallback happens to be.
+# Prints nothing and returns 1 if server.json doesn't exist yet or has no
+# environment field — callers must treat that as "unknown", not "development".
+detect_installed_environment() {
+  local file="${DEPLOYMENT_DIR}/server.json" env=""
+  [[ -f "${file}" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    env="$(jq -r '.environment // empty' "${file}" 2>/dev/null)"
+  else
+    env="$(grep -m1 '"environment"' "${file}" 2>/dev/null | sed -E 's/.*"environment"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
+  fi
+  [[ -n "${env}" ]] || return 1
+  printf '%s' "${env}"
+}
+
 # ── Server identity (deployment/server.json) ─────────────────────────────
 #
 # See docs/COC-Integration.md#server-discovery. server.json is host-local
@@ -210,20 +232,36 @@ sync_history_json() {
 # callers must treat empty output as "unknown", not "down".
 fetch_backend_health_report() {
   local to="${1:-5}"
-  timeout "${to}" dc exec -T backend node -e "
-    require('http').get('http://localhost:4000/v1/health', (res) => {
-      let data = '';
-      res.on('data', (c) => { data += c; });
-      res.on('end', () => {
-        try {
-          const r = JSON.parse(data);
-          console.log(r.status);
-          console.log(r.uptimeSeconds);
-          for (const c of (r.checks || [])) console.log(c.name + '\t' + c.status);
-        } catch (e) { process.exit(1); }
-      });
-    }).on('error', () => process.exit(1));
-  " 2>/dev/null || true
+  # Deliberately NOT `timeout ... dc exec ...`: `timeout` execs its command
+  # directly — it has no shell, so it can't see dc(), which is a bash
+  # function, not a binary on $PATH. `timeout N dc ...` either fails
+  # outright ("dc: No such file or directory") or, on a host that happens
+  # to have the real `dc` (the POSIX arbitrary-precision calculator)
+  # installed, silently runs THAT instead, fed "exec -T backend node -e
+  # ..." as calculator input — either way producing no health report, with
+  # no error surfaced to the caller. ${COMPOSE} ("docker compose" or
+  # "docker-compose") is a real binary, so build the exact command dc()
+  # would run and hand *that* to timeout instead — same cd-to-PROJECT_ROOT
+  # and ERR-trap-reset dc() gives every other caller (see dc()'s comment).
+  # shellcheck disable=SC2086,SC2046
+  (
+    trap - ERR
+    cd "${PROJECT_ROOT}" || exit 1
+    timeout "${to}" ${COMPOSE} $(compose_files) exec -T backend node -e "
+      require('http').get('http://localhost:4000/v1/health', (res) => {
+        let data = '';
+        res.on('data', (c) => { data += c; });
+        res.on('end', () => {
+          try {
+            const r = JSON.parse(data);
+            console.log(r.status);
+            console.log(r.uptimeSeconds);
+            for (const c of (r.checks || [])) console.log(c.name + '\t' + c.status);
+          } catch (e) { process.exit(1); }
+        });
+      }).on('error', () => process.exit(1));
+    "
+  ) 2>/dev/null || true
 }
 
 # ── Non-interactive / COC support ────────────────────────────────────────
@@ -286,7 +324,20 @@ parse_common_flags() {
 #   config to demo — see docs/deployment/Architecture.md — only the
 #   per-host .env / .env.production content differs)
 # Nothing here is hardcoded to a specific host/port — those come from .env.
+#
+# Default resolution, in order: an explicit `--env` flag (handled by
+# parse_common_flags, which runs later and overrides whatever's set here);
+# DEPLOY_ENV already set in the calling shell's environment; this host's
+# own server.json (what it was actually installed/last deployed as — see
+# detect_installed_environment above); "production" only as a last resort,
+# for a host that hasn't been installed yet. Without the server.json step,
+# a script run with no flags on an already-installed demo/production host
+# would silently default to "production" regardless of which one this host
+# actually is — status.sh in particular is routinely run with no flags.
 
+if [[ -z "${DEPLOY_ENV:-}" ]]; then
+  DEPLOY_ENV="$(detect_installed_environment 2>/dev/null || true)"
+fi
 DEPLOY_ENV="${DEPLOY_ENV:-production}"
 BACKUP_DIR="${BACKUP_DIR:-${PROJECT_ROOT}/backups}"
 MIN_DISK_GB="${MIN_DISK_GB:-5}"

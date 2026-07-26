@@ -259,6 +259,20 @@ every script above — it's a library, not meant to be run directly.
 | `demo` | `compose.yml` + `compose.demo.yml` | Built images, nginx in front, only `80`/`443` exposed. Seeded by default. |
 | `production` | `compose.yml` + `compose.prod.yml` | Functionally identical to demo (see [docs/deployment/Architecture.md](deployment/Architecture.md)), but **seeding is skipped by default** (the seed creates known demo credentials — pass `--seed` to `install.sh` to force it). |
 
+**Default resolution when `--env` isn't given**, in order: an explicit
+`--env` flag always wins; then `DEPLOY_ENV` if already set in the calling
+shell's environment; then this host's own `deployment/server.json`
+(`environment` field — what it was actually installed/last deployed as);
+`production` only as a last resort, for a host that hasn't been installed
+yet. This matters most for `status.sh`, which is routinely run with no
+flags — without the `server.json` step it would silently report
+`production` on a demo host that simply wasn't told otherwise, while
+`history.sh` (which reads recorded facts, not a flag/default) correctly
+showed `demo` for the exact same deploy. `deploy.sh`/`rollback.sh` always
+require an explicit `--env demo|production` for the action itself, so
+their own reports/history entries were never affected by this — only a
+bare `status.sh` invocation was.
+
 See [docs/deployment/](deployment/) for the full per-environment guides (Development, Demo, Production, Rollback, Architecture).
 
 ## Environment variables
