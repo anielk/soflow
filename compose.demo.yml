@@ -68,7 +68,10 @@ services:
     read_only: true
     user: "1000:1000"
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "--spider", "http://localhost/"]
+      # Use 127.0.0.1, not localhost: BusyBox wget on Alpine resolves
+      # localhost to ::1 (IPv6) first, but nginx only listens on IPv4
+      # (0.0.0.0:80), so the healthcheck would fail with "Connection refused".
+      test: ["CMD", "wget", "-q", "-O", "-", "--spider", "http://127.0.0.1/"]
       interval: 15s
       timeout: 5s
       retries: 5
