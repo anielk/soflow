@@ -231,7 +231,8 @@ sync_history_json() {
 # Prints nothing (not an error) if the backend doesn't respond in time —
 # callers must treat empty output as "unknown", not "down".
 fetch_backend_health_report() {
-  local to="${1:-5}"
+  local to="${1:-5}" to_ms
+  to_ms=$(( to * 1000 ))
   # Deliberately NOT `timeout ... dc exec ...`: `timeout` execs its command
   # directly — it has no shell, so it can't see dc(), which is a bash
   # function, not a binary on $PATH. `timeout N dc ...` either fails
@@ -243,24 +244,50 @@ fetch_backend_health_report() {
   # "docker-compose") is a real binary, so build the exact command dc()
   # would run and hand *that* to timeout instead — same cd-to-PROJECT_ROOT
   # and ERR-trap-reset dc() gives every other caller (see dc()'s comment).
+  #
+  # The Node script itself never relies on the event loop draining on its
+  # own to exit: `res.on('end', ...)` completing does NOT guarantee no
+  # handle is still open (a completed HTTP response can leave its socket
+  # alive for a tick — keep-alive teardown, DNS resolver cleanup — and
+  # exactly how long depends on Node version/timing, not on this script).
+  # process.exit() is called unconditionally once the response is fully
+  # read, and req.setTimeout() gives the request its own internal deadline
+  # so a connection that never completes at all doesn't wait around for
+  # the outer `timeout` to notice — that outer `timeout` stays purely as a
+  # last-resort net for a hang *before* Node even starts (e.g. `docker
+  # compose exec` itself stalling), not as the thing making Node exit.
+  #
+  # `< /dev/null` on the exec itself: `-T` only disables pseudo-tty
+  # allocation, it does NOT detach stdin — `docker compose exec` (and
+  # `docker-compose` even more so) still attaches the caller's stdin by
+  # default. status.sh's own stdin is whatever *its* caller gave it; run
+  # non-interactively (a poller/cron/CI invoking `--json`, unlike a human
+  # running the plain-text report at a terminal) that's often a pipe that
+  # never reaches EOF, and the exec then blocks waiting to read from it —
+  # a wait the outer `timeout` above does not bound, since it's stuck
+  # before the remote Node script (and its own req.setTimeout) ever runs.
   # shellcheck disable=SC2086,SC2046
   (
     trap - ERR
     cd "${PROJECT_ROOT}" || exit 1
     timeout "${to}" ${COMPOSE} $(compose_files) exec -T backend node -e "
-      require('http').get('http://localhost:4000/v1/health', (res) => {
+      const req = require('http').get('http://localhost:4000/v1/health', (res) => {
         let data = '';
         res.on('data', (c) => { data += c; });
         res.on('end', () => {
+          let exitCode = 0;
           try {
             const r = JSON.parse(data);
             console.log(r.status);
             console.log(r.uptimeSeconds);
             for (const c of (r.checks || [])) console.log(c.name + '\t' + c.status);
-          } catch (e) { process.exit(1); }
+          } catch (e) { exitCode = 1; }
+          process.exit(exitCode);
         });
-      }).on('error', () => process.exit(1));
-    "
+      });
+      req.setTimeout(${to_ms}, () => { req.destroy(); process.exit(1); });
+      req.on('error', () => process.exit(1));
+    " < /dev/null
   ) 2>/dev/null || true
 }
 
