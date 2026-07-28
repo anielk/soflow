@@ -345,8 +345,10 @@ parse_common_flags() {
 #
 # development -> compose.yml + compose.dev.yml (hot-reload, bind mounts,
 #   published dev ports)
-# demo        -> compose.yml + compose.demo.yml (production build, no ports
-#   published to the host by default — see check_ports above)
+# demo        -> compose.yml + compose.demo.yml (production build; frontend
+#   publishes a fixed host port 80 — see check_ports below — so the
+#   existing external Nginx Proxy Manager never needs reconfiguring;
+#   backend stays `expose`-only, never published)
 # production  -> compose.yml + compose.prod.yml (identical build/runtime
 #   config to demo — see docs/deployment/Architecture.md — only the
 #   per-host .env / .env.production content differs)
@@ -509,6 +511,73 @@ wait_for_service_healthy() {
   return 1
 }
 
+# ── Git sync (fast-forward only) ─────────────────────────────────────────
+#
+# Shared by deploy-demo.sh/deploy-prod.sh — a safer, simpler alternative to
+# deploy.sh's own git handling (fetch + `reset --hard origin/main`, which
+# also stashes-and-continues over a dirty tree with --force). Those two
+# wrapper scripts are meant to run unattended (cron, a remote trigger) with
+# no operator present to approve a stash or a forced reset, so this only
+# ever fast-forwards and only ever runs over a clean tree — anything it
+# can't do safely, it refuses and exits non-zero rather than guessing.
+#
+# ff_only_git_sync — verifies PROJECT_ROOT is a real Leinaflow checkout with
+# an 'origin' remote, fetches, verifies the working tree is clean, then
+# `git pull --ff-only`. Must be run from PROJECT_ROOT (callers `cd` there
+# first — see deploy-demo.sh/deploy-prod.sh). Logs its own progress; callers
+# just check the exit code.
+#
+# Exit codes: 0 success; 10 not a Leinaflow checkout / no origin remote;
+# 11 git fetch failed; 12 working tree has uncommitted changes;
+# 13 git pull --ff-only failed (branch diverged from origin/main).
+ff_only_git_sync() {
+  if [[ ! -d "${PROJECT_ROOT}/.git" ]]; then
+    log_err "${PROJECT_ROOT} is not a git checkout — can't fetch/pull here."
+    return 10
+  fi
+  if [[ ! -f "${PROJECT_ROOT}/compose.yml" ]] || [[ ! -f "${PROJECT_ROOT}/deployment/deploy.sh" ]]; then
+    log_err "${PROJECT_ROOT} doesn't look like a Leinaflow checkout (missing compose.yml/deployment/deploy.sh)."
+    return 10
+  fi
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    log_err "No 'origin' remote configured in ${PROJECT_ROOT} — cannot fetch/pull."
+    return 10
+  fi
+  log_ok "Verified Leinaflow checkout with an 'origin' remote."
+
+  log_info "Fetching origin..."
+  if ! git fetch origin main --tags --quiet; then
+    log_err "git fetch origin failed — check network/credentials."
+    return 11
+  fi
+  log_ok "Fetched origin/main ($(git rev-parse --short origin/main))."
+
+  local dirty_status
+  dirty_status="$(git status --porcelain)"
+  if [[ -n "${dirty_status}" ]]; then
+    log_err "Working tree has uncommitted local changes — refusing to pull/deploy over them."
+    echo "${dirty_status}" | sed 's/^/    /' >&2
+    log_err "Commit, stash, or discard these yourself, then re-run. Nothing was touched."
+    return 12
+  fi
+  log_ok "Working tree is clean."
+
+  local before_commit after_commit
+  before_commit="$(git rev-parse HEAD)"
+  log_info "Pulling (fast-forward only)..."
+  if ! git pull --ff-only origin main; then
+    log_err "git pull --ff-only failed — local branch has diverged from origin/main."
+    log_err "This needs a human to resolve (rebase/merge/reset), not a script. Nothing was touched."
+    return 13
+  fi
+  after_commit="$(git rev-parse HEAD)"
+  if [[ "${before_commit}" == "${after_commit}" ]]; then
+    log_ok "Already up to date ($(git rev-parse --short HEAD))."
+  else
+    log_ok "Fast-forwarded ${before_commit:0:12} -> ${after_commit:0:12}."
+  fi
+}
+
 # ── OS detection ──────────────────────────────────────────────────────────
 
 detect_os() {
@@ -612,14 +681,12 @@ port_in_use() {
 # free. If Leinaflow's own containers already exist, a bound port is
 # expected (idempotent re-run) rather than a conflict.
 #
-# demo/production publish nothing to the host by default (see
-# compose.demo.yml/compose.prod.yml — frontend/backend only `expose`
-# internally on creator-network). Reaching them is an infrastructure
-# decision this repo doesn't make: a reverse proxy (e.g. Nginx Proxy
-# Manager) either joins creator-network directly (preferred — no host port
-# needed) or a host-specific compose override publishes whatever ports it
-# needs. Since Leinaflow's own tracked compose files bind nothing in those
-# environments, there's nothing here to check.
+# demo/production publish exactly one host port: frontend's fixed 80 (see
+# compose.demo.yml/compose.prod.yml) — kept constant on purpose so the
+# existing external Nginx Proxy Manager, which already forwards to host
+# port 80, never needs reconfiguring on a redeploy. Backend stays
+# `expose`-only, never published; NPM reaches it through the frontend's own
+# `/v1/:path*` rewrite, not a host port.
 check_ports() {
   local already_installed=0
   if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${RESOURCE_PREFIX}-"; then
@@ -630,8 +697,7 @@ check_ports() {
   if [[ "${DEPLOY_ENV}" == "development" ]]; then
     ports=("${FRONTEND_PORT:-3000}" "${BACKEND_PORT:-4000}" "${POSTGRES_PORT:-5432}" "${REDIS_PORT:-6379}")
   else
-    log_info "No ports published to the host by default in '${DEPLOY_ENV}' — nothing to check here (see comment above)."
-    return 0
+    ports=(80)
   fi
 
   local conflict=0

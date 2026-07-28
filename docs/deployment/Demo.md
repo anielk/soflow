@@ -27,14 +27,16 @@ through any particular reverse proxy topology. See
 
 | Service | Image target | Command | Exposure |
 |---|---|---|---|
-| frontend | `production` | `npm run start` | internal only (`expose: 3000`) |
+| frontend | `production` | `npm run start` | published on host port `80` (fixed — `80:3000`) |
 | backend | `production` | `node dist/main` | internal only (`expose: 4000`) |
 | postgres / redis | — | — | internal only |
 
-Nothing is published to the host by default — see
-[Architecture.md#networking](Architecture.md#networking) for how a reverse
-proxy (infrastructure, not part of this repo) is expected to reach
-frontend/backend.
+Frontend's `80:3000` mapping is fixed, not `${FRONTEND_PORT}`-driven — the
+existing external Nginx Proxy Manager already forwards to host port 80 and
+must never need reconfiguring on a redeploy. Backend stays internal-only;
+NPM reaches it through the frontend's own `/v1/:path*` rewrite
+(`frontend/next.config.mjs`), not a published port. See
+[Architecture.md#networking](Architecture.md#networking).
 
 frontend/backend containers run `read_only: true` with a `tmpfs` `/tmp`, as
 non-root (`1000:1000`) — same as production.

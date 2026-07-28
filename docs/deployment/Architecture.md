@@ -163,18 +163,22 @@ service name (`http://backend:4000`, `postgres:5432`, ...).
   the host (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from
   `.env`) for local tooling (psql, Redis CLI, browser). `mailhog` also
   publishes its web UI on `8025`.
-- **Demo/production**: frontend and backend only `expose` their ports
-  internally — nothing is published to the host by default. Postgres/Redis
-  are never reachable from outside Docker.
+- **Demo/production**: frontend publishes a single, fixed host port — `80`
+  (`80:3000`, hardcoded in compose.demo.yml/compose.prod.yml, not
+  `${FRONTEND_PORT}`-driven like development). Backend only `expose`s its
+  port internally — never published. Postgres/Redis are never reachable
+  from outside Docker.
 
-  Leinaflow deliberately doesn't decide how a reverse proxy reaches
-  frontend/backend in demo/production — that's an infrastructure topology
-  choice, not something the app should hardcode:
-  - **Preferred**: the reverse proxy joins `creator-network` directly and
-    reaches the containers by service name
-    (`frontend:3000`, `backend:4000`) — no host port involved at all.
-  - **When required**: a host-specific compose override (outside this
-    repo's tracked files) publishes whatever ports that deployment needs.
+  This is a deliberate exception to "Leinaflow doesn't hardcode reverse
+  proxy topology": the existing external Nginx Proxy Manager already
+  forwards to host port 80 on the demo/production hosts, and must never
+  need reconfiguring on a redeploy — so frontend keeps that port constant
+  rather than leaving it to a host-specific override. NPM reaches the
+  backend through the frontend's own `/v1/:path*` rewrite
+  (`frontend/next.config.mjs`), not a published backend port. A host whose
+  reverse proxy instead joins `creator-network` directly (no host port
+  needed at all) can still do so — the fixed `80:3000` mapping doesn't
+  prevent that, it's just no longer the only way in.
 
   Either way, `deployment/healthcheck.sh` and `deployment/deploy.sh`'s smoke
   tests check frontend/backend from inside their own containers (see
@@ -188,7 +192,7 @@ service name (`http://backend:4000`, `postgres:5432`, ...).
 | Filesystem | writable (bind mounts) | `read_only: true` + `tmpfs` for `/tmp` |
 | User | container default (root-equivalent build tools) | `1000:1000` (non-root) |
 | `no-new-privileges` | yes | yes |
-| Published ports | app ports directly | none by default — see [Networking](#networking) |
+| Published ports | app ports directly | frontend only, fixed `80` — see [Networking](#networking) |
 | Build target | `development` | `production` |
 | Security headers | set by Next.js (`frontend/next.config.mjs`) | set by Next.js (`frontend/next.config.mjs`) |
 | Upload size limit | Multer (`MEDIA_MAX_FILE_SIZE_MB`) | Multer (`MEDIA_MAX_FILE_SIZE_MB`) |
@@ -267,12 +271,15 @@ Note this only covers **naming**, not port collisions: `FRONTEND_PORT`/
 `BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` still default to
 `3000`/`4000`/`5432`/`6379` in development, so two products sharing one
 development host still need distinct values set in each product's own
-`.env`. Demo/production don't have this problem the same way — nothing is
-published to the host by default there (see [Networking](#networking)), so
-co-hosting multiple products just means the shared reverse proxy joins each
-product's own `creator-network`-equivalent and routes to each by service
-name; that reverse proxy's own configuration is infrastructure, out of
-scope for this repo.
+`.env`. Demo/production carry the *same* concern now for a different
+reason: frontend's host port there is fixed at `80` (see
+[Networking](#networking)) precisely so the existing Nginx Proxy Manager
+never needs reconfiguring — which means two products both using this exact
+overlay can't co-host on one demo/production Docker host by binding host
+port 80 twice. A second product on the same host either joins
+`creator-network`-equivalent directly with the reverse proxy (no host port
+needed, same as before) or needs its own host-level port/vhost — that
+reverse proxy configuration is infrastructure, out of scope for this repo.
 
 ## Notes for other Cloudivo products adopting this standard
 

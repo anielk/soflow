@@ -15,8 +15,15 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
-    expose:
-      - "3000"
+    # Fixed on purpose — not ${FRONTEND_PORT}-driven like development's
+    # mapping. The existing Nginx Proxy Manager (infrastructure, outside
+    # this repo) already forwards to host port 80 and must never need
+    # reconfiguring on a redeploy, so this host port can't vary by-host
+    # the way development's ports do. Backend stays `expose`-only
+    # (internal, see below) — NPM reaches it through the frontend's own
+    # `/v1/:path*` rewrite (frontend/next.config.mjs), not directly.
+    ports:
+      - "80:3000"
     read_only: true
     volumes:
       - type: tmpfs

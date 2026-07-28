@@ -1,16 +1,11 @@
 #!/usr/bin/env bash
-# deploy-demo.sh — the single supported entry point for restoring/updating
-# the demo deployment. Meant to be run as just `deploy-demo` (symlinked onto
-# PATH, e.g. /usr/local/bin/deploy-demo) from any directory, unattended.
+# deploy-prod.sh — the single supported entry point for restoring/updating
+# the production deployment. Meant to be run as just `deploy-prod`
+# (symlinked onto PATH, e.g. /usr/local/bin/deploy-prod) from any directory,
+# unattended. Identical contract to deploy-demo.sh — see that script's
+# header — the only difference is --env production below.
 #
-# It wraps deploy.sh's build -> migrate -> start -> health-wait -> smoke-test
-# -> summary pipeline with a safer git sync of its own (see
-# lib/common.sh#ff_only_git_sync): fetch, verify the tree is clean, then
-# `git pull --ff-only` — never a hard reset, never forced over local
-# changes. deploy.sh itself is then called with --skip-git so it doesn't
-# also run its own (stronger) git handling on top of that.
-#
-# Usage: deploy-demo
+# Usage: deploy-prod
 #
 # Exit codes:
 #   0      deployed and verified healthy (see deploy.sh's own summary)
@@ -22,7 +17,7 @@
 set -Eeuo pipefail
 
 # Resolves through a symlink (readlink -f), unlike a plain BASH_SOURCE
-# dirname — this script is meant to be invoked as /usr/local/bin/deploy-demo,
+# dirname — this script is meant to be invoked as /usr/local/bin/deploy-prod,
 # a symlink into this checkout, from any cwd.
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 
@@ -31,7 +26,7 @@ source "${SCRIPT_DIR}/lib/common.sh"
 
 cd "${PROJECT_ROOT}"
 
-log_step "deploy-demo — Leinaflow demo deployment"
+log_step "deploy-prod — Leinaflow production deployment"
 log_info "Repository: ${PROJECT_ROOT}"
 
 ff_only_git_sync || exit $?
@@ -39,4 +34,4 @@ ff_only_git_sync || exit $?
 # --skip-git: the git sync above already happened; deploy.sh must not also
 # try its own (stronger) git handling on top of it.
 log_step "Handing off to deploy.sh for build/migrate/start/health/smoke test"
-exec "${DEPLOYMENT_DIR}/deploy.sh" --env demo --skip-git -y
+exec "${DEPLOYMENT_DIR}/deploy.sh" --env production --skip-git -y
