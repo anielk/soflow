@@ -61,7 +61,7 @@ log_ok "Environment files copied."
 # ── Configuration ────────────────────────────────────────────────────────
 log_info "Copying deployment configuration..."
 mkdir -p "${TARGET_DIR}/config"
-for item in compose.yml compose.dev.yml compose.demo.yml compose.prod.yml docker nginx; do
+for item in compose.yml compose.dev.yml compose.demo.yml compose.prod.yml docker; do
   [[ -e "${PROJECT_ROOT}/${item}" ]] && cp -r "${PROJECT_ROOT}/${item}" "${TARGET_DIR}/config/"
 done
 log_ok "Configuration copied."

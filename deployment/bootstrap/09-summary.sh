@@ -18,8 +18,13 @@ if [[ "${DEPLOY_ENV}" == "development" ]]; then
   frontend_url="http://localhost:${FRONTEND_PORT:-3000}"
   backend_url="http://localhost:${BACKEND_PORT:-4000}/v1"
 else
-  frontend_url="http://localhost/ (or your configured domain)"
-  backend_url="http://localhost/api/ (proxied by nginx)"
+  # demo/production don't publish frontend/backend ports to the host by
+  # default — whatever reverse proxy this host uses either joins
+  # creator-network directly (preferred) or a host-specific compose
+  # override publishes whatever ports it needs. That choice lives outside
+  # this repo, so there's no single URL to print here.
+  frontend_url="frontend:3000 on creator-network (not published to the host by default)"
+  backend_url="backend:4000/v1 on creator-network (not published to the host by default)"
 fi
 
 docker_version="$(docker --version 2>/dev/null || echo "unknown")"

@@ -1,11 +1,18 @@
 # Production
 
 Production runs the identical build/runtime configuration as demo — same
-image targets, same read-only/non-root hardening, same nginx front door.
-Nothing in `compose.prod.yml` differs from `compose.demo.yml`; only the
-production host's own `.env` / `.env.production` content (real
-`DATABASE_URL`, real `NEXT_PUBLIC_API_URL`, real SMTP credentials, real
-`JWT_SECRET`/`SESSION_SECRET`, ...) does.
+image targets, same read-only/non-root hardening. Nothing in
+`compose.prod.yml` differs from `compose.demo.yml`; only the production
+host's own `.env` / `.env.production` content (real `DATABASE_URL`, real
+`NEXT_PUBLIC_API_URL`, real SMTP credentials, real `JWT_SECRET`/
+`SESSION_SECRET`, ...) does.
+
+Leinaflow doesn't deploy or configure a reverse proxy itself — see
+[Architecture.md](Architecture.md#where-infrastructure-ends-and-leinaflow-begins).
+In production that's typically a reverse proxy manager (Nginx Proxy Manager,
+Traefik, Caddy, ...), running as its own infrastructure, either joining
+`creator-network` directly or reaching a host-published port, depending on
+how that host is set up.
 
 ## Deploy
 
@@ -20,9 +27,10 @@ deployment/deploy.sh --env production           # subsequent releases
 ```
 
 `deploy.sh` is the **Cloudivo Deployment Engine** — it fetches and resets to
-`origin/main`, rebuilds, migrates, restarts, waits for backend/frontend/nginx
-health, and runs a real HTTP smoke test (`/api/v1/health` and `/`) before
-declaring success, printing the deployed commit and how long it took. See
+`origin/main`, rebuilds, migrates, restarts, waits for backend/frontend
+health, and runs a real HTTP smoke test (`/v1/health` and `/`, checked from
+inside each container) before declaring success, printing the deployed
+commit and how long it took. See
 [../Deployment.md#the-deployment-engine-deploysh](../Deployment.md#the-deployment-engine-deploysh)
 for the full step-by-step and its exit-code contract. `update.sh` (the
 original `git pull --ff-only` → rebuild → restart → migrate path) still
@@ -63,7 +71,7 @@ and rationale.
 ## Before every deploy
 
 1. `deployment/backup.sh --env production` — snapshots DB, media, env files,
-   and compose/nginx config to `backups/YYYY-MM-DD-HHMM/`.
+   and compose/docker config to `backups/YYYY-MM-DD-HHMM/`.
 2. Confirm the same change has already been verified on demo.
 3. `deployment/deploy.sh --env production`.
 4. `deployment/status.sh --env production` — a quick read-only check of what's

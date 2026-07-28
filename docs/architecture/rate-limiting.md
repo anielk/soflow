@@ -20,9 +20,9 @@ This had three compounding defects:
    the app — register, login, workspace save, profile save, media rename,
    add member, add creator, contact form, etc. — shared one counter per
    method. Since every request in this deployment arrives from the same
-   upstream (the frontend's dev proxy, or nginx in front of it), that
-   counter was effectively shared by the whole app's traffic, not per real
-   client.
+   upstream (the frontend's dev proxy, or a reverse proxy in front of it in
+   demo/production), that counter was effectively shared by the whole app's
+   traffic, not per real client.
 3. **`res.send()` with no status code set**, which defaults to `200 OK` with
    a `text/html` body of `"Too Many Requests"`. Every frontend save call
    checks `!response.ok` before parsing JSON — since the status was 200,
@@ -57,16 +57,22 @@ This fixes all three defects above:
 
 ## Reverse proxy correctness
 
-`ThrottlerGuard` keys its bucket on `req.ip`. Behind a reverse proxy (nginx
-in production, the frontend's Next.js dev-mode rewrite locally), the
-"client" Express sees by default is the proxy itself, not the real caller —
-which would put the *entire app's* traffic back into one shared bucket,
+`ThrottlerGuard` keys its bucket on `req.ip`. Behind a reverse proxy (an
+infrastructure-level reverse proxy, operator's choice, in demo/production,
+the frontend's Next.js dev-mode rewrite locally), the "client"
+Express sees by default is the proxy itself, not the real caller — which
+would put the *entire app's* traffic back into one shared bucket,
 reintroducing the same class of bug this fix was meant to close.
 
 `main.ts` sets `app.getHttpAdapter().getInstance().set('trust proxy', 1)` so
 Express reads the real client address out of `X-Forwarded-For` (one hop
 back from the direct connection) instead of trusting the socket address.
-`nginx/default.conf` already sets `X-Forwarded-For: $proxy_add_x_forwarded_for`
-on both the `/api/` and `/` locations, so this is correct as soon as nginx
-(or any single reverse proxy) sits in front — no further change needed to
-move this app behind one.
+This is correct as long as exactly one reverse proxy sits directly in front
+of the backend and sets `X-Forwarded-For` itself — true of any standard
+reverse proxy placed directly in front of this app. There is no internal
+nginx layer setting that header on this
+app's behalf anymore (see
+[docs/deployment/Architecture.md](../deployment/Architecture.md#where-infrastructure-ends-and-leinaflow-begins))
+— `trust proxy: 1` assumes whatever infrastructure reverse proxy is in
+front is the *only* hop, so a deployment that chains two reverse proxies in
+front of Leinaflow would need to adjust this value accordingly.

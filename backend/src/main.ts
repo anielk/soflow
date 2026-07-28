@@ -8,9 +8,11 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // This app sits behind nginx/the frontend's dev proxy — trust its
-  // X-Forwarded-For so req.ip (what ThrottlerGuard keys rate limits on)
-  // reflects the real client, not the proxy's own address for every request.
+  // This app sits behind a reverse proxy in demo/production (infrastructure,
+  // operator's choice — not something this repo deploys) and the frontend's
+  // dev-mode rewrite locally — trust its X-Forwarded-For so
+  // req.ip (what ThrottlerGuard keys rate limits on) reflects the real
+  // client, not the proxy's own address for every request.
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   // Set WebSocket adapter explicitly to avoid "No driver (WebSockets) has been selected" error

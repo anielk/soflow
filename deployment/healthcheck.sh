@@ -37,7 +37,6 @@ fi
 
 # ── Expected containers ──────────────────────────────────────────────────
 EXPECTED_SERVICES=(frontend backend postgres redis)
-[[ "${DEPLOY_ENV}" != "development" ]] && EXPECTED_SERVICES+=(nginx)
 
 for svc in "${EXPECTED_SERVICES[@]}"; do
   if service_running "${svc}"; then

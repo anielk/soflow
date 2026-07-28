@@ -84,8 +84,14 @@ print_summary() {
     frontend_url="http://localhost:${FRONTEND_PORT:-3000}"
     backend_url="http://localhost:${BACKEND_PORT:-4000}/v1"
   else
-    frontend_url="http://localhost/ (or your configured domain)"
-    backend_url="http://localhost/api/ (proxied by nginx)"
+    # demo/production don't publish frontend/backend ports to the host by
+    # default (see compose.demo.yml/compose.prod.yml) — reaching them
+    # publicly is an infrastructure decision this repo doesn't make: whatever
+    # reverse proxy this host uses either joins creator-network directly
+    # (preferred) or a host-specific compose override publishes whatever
+    # ports it needs.
+    frontend_url="frontend:3000 on creator-network (not published to the host by default — see comment above)"
+    backend_url="backend:4000/v1 on creator-network (not published to the host by default — see comment above)"
   fi
 
   log_step "Leinaflow install complete (env: ${DEPLOY_ENV})"

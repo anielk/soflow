@@ -10,6 +10,11 @@ export const envValidationSchema = Joi.object({
   REDIS_URL: Joi.string().required(),
   MEDIA_STORAGE_DRIVER: Joi.string().valid('local').default('local'),
   MEDIA_STORAGE_PATH: Joi.string().default('/data/media'),
+  // Hard technical ceiling Multer enforces (media.module.ts), not the real
+  // per-plan cap — that's PLAN_UPLOAD_LIMITS_MB in media/upload-limits.ts,
+  // checked once the uploading workspace is known. Must stay >= the largest
+  // plan/override limit in use, or valid uploads get rejected before that
+  // check ever runs.
   MEDIA_MAX_FILE_SIZE_MB: Joi.number().default(2048),
 
   // Public URL used to build links inside emails (reset links, invite links, ...).
@@ -17,7 +22,8 @@ export const envValidationSchema = Joi.object({
 
   // Global request rate limit — a rolling window, not a lifetime counter.
   // Keyed per client IP (see main.ts's `trust proxy` setting, which makes
-  // that IP the real client behind nginx's X-Forwarded-For, not the proxy).
+  // that IP the real client behind the reverse proxy's X-Forwarded-For,
+  // not the proxy itself).
   RATE_LIMIT_TTL_MS: Joi.number().default(60000),
   RATE_LIMIT_MAX: Joi.number().default(300),
 

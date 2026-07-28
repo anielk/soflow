@@ -20,40 +20,40 @@ enum Role {
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 model User {
-  id            String            @id @default(cuid())
-  email         String            @unique
-  username      String            @unique
-  passwordHash  String
-  name          String?
-  bio           String?
-  avatarUrl     String?
-  bannerUrl     String?
-  isCreator     Boolean           @default(false)
-  role          Role              @default(USER)
+  id                  String            @id @default(cuid())
+  email               String            @unique
+  username            String            @unique
+  passwordHash        String
+  name                String?
+  bio                 String?
+  avatarUrl           String?
+  bannerUrl           String?
+  isCreator           Boolean           @default(false)
+  role                Role              @default(USER)
   // Password reset — resetTokenHash stores sha256(rawToken), never the raw
   // token itself, so a database read alone can't be used to reset a password.
-  resetTokenHash      String?   @unique
+  resetTokenHash      String?           @unique
   resetTokenExpiresAt DateTime?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  creatorProfile CreatorProfile?
-  workspaceMembers WorkspaceMember[]
-  media         Media[]
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  creatorProfile      CreatorProfile?
+  workspaceMembers    WorkspaceMember[]
+  media               Media[]
 }
 
 model CreatorProfile {
-  id           String    @id @default(cuid())
-  userId       String    @unique
-  name         String?
-  bio          String?
-  avatarUrl    String?
-  bannerUrl    String?
-  website      String?
-  socialLinks  Json?
-  verified     Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  user         User      @relation(fields: [userId], references: [id])
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  name        String?
+  bio         String?
+  avatarUrl   String?
+  bannerUrl   String?
+  website     String?
+  socialLinks Json?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model HealthSnapshot {
@@ -67,28 +67,33 @@ model HealthSnapshot {
 // Nothing currently enforces a single workspace — the architecture is open.
 
 model Workspace {
-  id            String            @id @default(cuid())
-  name          String
-  slug          String            @unique
-  plan          String            @default("free")
-  isActive      Boolean           @default(true)
+  id              String            @id @default(cuid())
+  name            String
+  slug            String            @unique
+  plan            String            @default("free")
+  // Per-workspace override of the plan's default upload cap (see
+  // PLAN_UPLOAD_LIMITS_MB in backend/src/media/upload-limits.ts). Null means
+  // "use the plan default" — this only needs a value for a negotiated
+  // Enterprise limit that differs from the plan default.
+  maxUploadSizeMb Int?
+  isActive        Boolean           @default(true)
   // Branding — logo only for now; accent color and favicon are deliberately
   // not modeled yet (still "(future)" per the sprint that added this).
-  logoUrl       String?
+  logoUrl         String?
   // Localization structure only — no i18n/translation framework, no locale
   // beyond the default is actually implemented yet. These fields exist so
   // Settings has somewhere real to persist a choice when that work lands.
-  locale        String            @default("en")
-  timezone      String            @default("UTC")
-  dateFormat    String            @default("MM/DD/YYYY")
-  numberFormat  String            @default("en-US")
-  currency      String            @default("USD")
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  members       WorkspaceMember[]
-  aiConnections AIConnection[]
-  media         Media[]
-  creators      Creator[]
+  locale          String            @default("en")
+  timezone        String            @default("UTC")
+  dateFormat      String            @default("MM/DD/YYYY")
+  numberFormat    String            @default("en-US")
+  currency        String            @default("USD")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  members         WorkspaceMember[]
+  aiConnections   AIConnection[]
+  media           Media[]
+  creators        Creator[]
 }
 
 model WorkspaceMember {
@@ -99,6 +104,7 @@ model WorkspaceMember {
   joinedAt    DateTime  @default(now())
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([workspaceId, userId])
 }
 
@@ -108,31 +114,32 @@ model WorkspaceMember {
 // This allows dynamic provider registration without code changes.
 
 model AIProvider {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   name        String
-  slug        String        @unique   // e.g. "openai", "anthropic", "ollama"
-  baseUrl     String?                 // required for self-hosted (Ollama, Azure)
-  authType    String                  // "api_key" | "none" | "bearer" | "azure"
-  isEnabled   Boolean       @default(true)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  slug        String         @unique // e.g. "openai", "anthropic", "ollama"
+  baseUrl     String? // required for self-hosted (Ollama, Azure)
+  authType    String // "api_key" | "none" | "bearer" | "azure"
+  isEnabled   Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   models      AIModel[]
   connections AIConnection[]
 }
 
 model AIModel {
-  id               String     @id @default(cuid())
-  providerId       String
-  name             String                      // display name: "GPT-4o"
-  modelId          String                      // API value: "gpt-4o"
-  contextWindow    Int?                        // max tokens
-  inputCostPer1k   Float?                      // USD per 1k input tokens
-  outputCostPer1k  Float?                      // USD per 1k output tokens
-  capabilities     String[]                    // ["chat","vision","code","embedding"]
-  isEnabled        Boolean    @default(true)
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  provider         AIProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  id              String     @id @default(cuid())
+  providerId      String
+  name            String // display name: "GPT-4o"
+  modelId         String // API value: "gpt-4o"
+  contextWindow   Int? // max tokens
+  inputCostPer1k  Float? // USD per 1k input tokens
+  outputCostPer1k Float? // USD per 1k output tokens
+  capabilities    String[] // ["chat","vision","code","embedding"]
+  isEnabled       Boolean    @default(true)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  provider        AIProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
   @@unique([providerId, modelId])
 }
 
@@ -140,19 +147,20 @@ model AIConnection {
   id           String     @id @default(cuid())
   workspaceId  String
   providerId   String
-  encryptedKey String?                         // AES-encrypted API key
-  baseUrl      String?                         // workspace-level override
+  encryptedKey String? // AES-encrypted API key
+  baseUrl      String? // workspace-level override
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   provider     AIProvider @relation(fields: [providerId], references: [id])
+
   @@unique([workspaceId, providerId])
 }
 
 model AISettings {
   id                String   @id @default(cuid())
-  workspaceId       String?  @unique   // null = platform-global default
+  workspaceId       String?  @unique // null = platform-global default
   defaultProviderId String?
   defaultModelId    String?
   temperature       Float    @default(0.7)
@@ -183,19 +191,19 @@ model Media {
   id               String      @id @default(cuid())
   workspaceId      String
   ownerId          String
-  creatorId        String?                         // optional: which agency-managed Creator this belongs to (null = general workspace media)
-  filename         String                          // generated safe on-disk name
-  originalFilename String                          // user-supplied name, display only, never trusted
+  creatorId        String? // optional: which agency-managed Creator this belongs to (null = general workspace media)
+  filename         String // generated safe on-disk name
+  originalFilename String // user-supplied name, display only, never trusted
   mimeType         String
   extension        String
-  sizeBytes        BigInt                          // BigInt: default 2GB max overflows Int32
+  sizeBytes        BigInt // BigInt: default 2GB max overflows Int32
   width            Int?
   height           Int?
   duration         Float?
   type             MediaType
   status           MediaStatus @default(PROCESSING)
-  storageProvider  String                          // "local" today; matches StorageService driver id
-  storagePath      String                          // key within that provider
+  storageProvider  String // "local" today; matches StorageService driver id
+  storagePath      String // key within that provider
   thumbnailPath    String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
@@ -205,6 +213,7 @@ model Media {
   // their uploaded files — media just becomes unassigned, still visible in
   // the workspace's general library.
   creator          Creator?    @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+
   @@index([workspaceId])
   @@index([creatorId])
 }
@@ -235,6 +244,7 @@ model Creator {
   updatedAt   DateTime      @updatedAt
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   media       Media[]
+
   @@index([workspaceId])
 }
 

@@ -44,8 +44,12 @@
 #   3. Build Docker images
 #   4. Run `prisma migrate deploy` (forward-only)
 #   5. Start containers
-#   6. Wait for backend, frontend and nginx to report Docker-healthy
-#   7. Smoke test: GET /api/v1/health and GET / through the public nginx port
+#   6. Wait for backend and frontend to report Docker-healthy
+#   7. Smoke test: GET /v1/health (backend) and GET / (frontend), each
+#      checked from inside its own container — topology-independent, since
+#      Leinaflow doesn't assume whether a reverse proxy reaches it via the
+#      Docker network or a published host port (that's an infrastructure
+#      decision, not this repo's)
 #   8. Print the deployed commit and total duration, append a line to
 #      deployment/.deploy-history.log (rollback.sh reads this), regenerate
 #      deployment/history.json from it, and refresh deployment/server.json
@@ -224,19 +228,20 @@ trap 'on_error "${LINENO}"' ERR
 
 # ── Helpers ────────────────────────────────────────────────────────────────
 
-smoke_test_http() {
-  local desc="$1" url="$2" expected="${3:-200}" code
-  # No -f here deliberately: -f suppresses the response on a non-2xx and can
-  # interact badly with -w's output — capture the raw status code ourselves
-  # and compare it explicitly instead.
-  if ! code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${url}" 2>/dev/null)"; then
-    code="000"
-  fi
-  if [[ "${code}" == "${expected}" ]]; then
-    log_ok "Smoke test passed: ${desc} -> HTTP ${code}"
+# smoke_test_container <desc> <service> <url> — HTTP GET <url> from inside
+# <service>'s own container (via common.sh's http_check_in_container),
+# rather than through a published host port or reverse proxy. This is what
+# lets the smoke test pass regardless of how (or whether) a reverse proxy in
+# front of Leinaflow is set up — Leinaflow itself doesn't publish app ports
+# to the host by default in demo/production (see compose.demo.yml/
+# compose.prod.yml), so a host-facing curl can't be assumed to work here.
+smoke_test_container() {
+  local desc="$1" service="$2" url="$3"
+  if http_check_in_container "${service}" "${url}"; then
+    log_ok "Smoke test passed: ${desc}"
     return 0
   fi
-  log_err "Smoke test FAILED: ${desc} (${url}) -> HTTP ${code} (expected ${expected})"
+  log_err "Smoke test FAILED: ${desc} (${url} inside ${service})"
   return 1
 }
 
@@ -316,10 +321,10 @@ if ! dc up -d --wait --wait-timeout "${HEALTH_TIMEOUT}"; then
 fi
 log_ok "Containers started."
 
-# 6. Wait for / verify backend, frontend and nginx health individually
+# 6. Wait for / verify backend and frontend health individually
 CURRENT_STAGE="Health verification"; STAGE_EXIT_CODE=5
-log_step "6. Verifying backend, frontend and nginx health"
-for svc in backend frontend nginx; do
+log_step "6. Verifying backend and frontend health"
+for svc in backend frontend; do
   wait_for_service_healthy "${svc}" "${HEALTH_TIMEOUT}"
   log_ok "${svc}: healthy"
 done
@@ -328,13 +333,12 @@ done
 CURRENT_STAGE="Smoke tests"; STAGE_EXIT_CODE=6
 if [[ "${RUN_SMOKE_TEST}" -eq 1 ]]; then
   log_step "7. Running smoke tests"
-  # Through the public nginx entry point (the only thing published in
-  # demo/production — see nginx/default.conf), exactly as an end user or
-  # load balancer would reach the stack. nginx's /api/ location strips that
-  # prefix and proxies to the backend, which serves health at /v1/health —
-  # hence /api/v1/health here rather than a bare /v1/health.
-  smoke_test_http "backend /api/v1/health" "http://127.0.0.1/api/v1/health" 200
-  smoke_test_http "frontend /" "http://127.0.0.1/" 200
+  # Checked from inside each container (see smoke_test_container above) —
+  # not through nginx (removed) and not assuming a published host port,
+  # since whether/how a reverse proxy reaches these containers is an
+  # infrastructure decision this repo doesn't make.
+  smoke_test_container "backend /v1/health" backend "http://localhost:4000/v1/health"
+  smoke_test_container "frontend /" frontend "http://localhost:3000"
   log_ok "Smoke tests passed."
 else
   log_step "7. Smoke tests skipped (--no-smoke-test)"

@@ -123,8 +123,8 @@ What it does, strictly in order, aborting on the first failure
 3. **Build Docker images** — `docker compose build`.
 4. **Run `prisma migrate deploy`** — forward-only; starts postgres/redis first if needed. Never `migrate reset`, never seeds.
 5. **Start containers** — `docker compose up -d --wait`.
-6. **Wait for backend, frontend and nginx** to report Docker-healthy individually.
-7. **Smoke test** — real HTTP requests through the public nginx port: `GET /api/v1/health` and `GET /` both expected to return exactly `200`. `--no-smoke-test` skips this.
+6. **Wait for backend and frontend** to report Docker-healthy individually.
+7. **Smoke test** — real HTTP requests, checked from inside each container (not through any particular reverse proxy topology — see [deployment/Architecture.md#networking](deployment/Architecture.md#networking)): `GET /v1/health` (backend) and `GET /` (frontend), both expected to return exactly `200`. `--no-smoke-test` skips this.
 8. **Print the deployed commit hash and total deployment duration**, append a line to `deployment/.deploy-history.log`, regenerate `deployment/history.json` from it, and refresh `deployment/server.json`.
 
 `--json` sends every human-readable line to stderr instead and prints one
@@ -241,7 +241,7 @@ All scripts live in `deployment/` and share two flags:
 | `history.sh` | Read-only deployment history table from `.deploy-history.log`: timestamp, environment, commit, branch, duration, result, rollback info. `--json` for machine consumption (same shape `deployment/history.json` is regenerated in). |
 | `rollback.sh` | Code rollback to a prior successfully-deployed commit. `--to <ref>`, `--data-rollback` to print (not run) the data-rollback flow. `--force` required if the checkout has uncommitted changes. |
 | `update.sh` | The original release path: `git pull` (if applicable) → rebuild → restart → migrate → health check. Still works, still supports `development`; prefer `deploy.sh` for demo/production releases going forward. |
-| `backup.sh` | Snapshot database, media, `.env`, and compose/nginx config into `backups/YYYY-MM-DD-HHMM/`. Prints the backup path. |
+| `backup.sh` | Snapshot database, media, `.env`, and compose/docker config into `backups/YYYY-MM-DD-HHMM/`. Prints the backup path. |
 | `restore.sh` | Interactively restore a backup. `--backup <dir>` to pick one non-interactively, `--dry-run` to preview without touching anything. |
 | `healthcheck.sh` | PASS/FAIL check of Docker, all containers, Postgres, Redis, backend, frontend, disk, and media storage. Exit code 0/1. |
 | `uninstall.sh` | Stop and remove containers. `--remove-volumes` to also delete data (typed confirmation required), `--delete-backups` to also wipe backups. `--dry-run` supported. |
@@ -256,7 +256,7 @@ every script above — it's a library, not meant to be run directly.
 | Environment | Compose files | Notes |
 |---|---|---|
 | `development` | `compose.yml` + `compose.dev.yml` | Hot-reload, bind mounts, ports published directly (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from `.env`). Seeded by default. |
-| `demo` | `compose.yml` + `compose.demo.yml` | Built images, nginx in front, only `80`/`443` exposed. Seeded by default. |
+| `demo` | `compose.yml` + `compose.demo.yml` | Built images, nothing published to the host by default — see [deployment/Architecture.md#networking](deployment/Architecture.md#networking). Seeded by default. |
 | `production` | `compose.yml` + `compose.prod.yml` | Functionally identical to demo (see [docs/deployment/Architecture.md](deployment/Architecture.md)), but **seeding is skipped by default** (the seed creates known demo credentials — pass `--seed` to `install.sh` to force it). |
 
 **Default resolution when `--env` isn't given**, in order: an explicit
@@ -289,7 +289,7 @@ for the authoritative list of what the backend itself requires).
 | `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Yes | Postgres container credentials |
 | `MEDIA_STORAGE_DRIVER` | No (default `local`) | Storage backend for the media library |
 | `MEDIA_STORAGE_PATH` | No (default `/data/media`) | Mount point inside the backend container |
-| `MEDIA_MAX_FILE_SIZE_MB` | No (default `2048`) | Max upload size |
+| `MEDIA_MAX_FILE_SIZE_MB` | No (default `2048`) | Hard technical ceiling on upload size (DoS/disk backstop). The real, business-facing cap is per-plan — Free 100MB / Pro 500MB / Enterprise 2048MB, configurable per workspace — enforced in `MediaService`, not here. |
 | `NEXT_PUBLIC_API_URL` | No | Frontend → backend base URL |
 
 Deployment-script-specific variables (all optional, sensible defaults):
@@ -340,7 +340,7 @@ backups/
     db.sql
     media.tar.gz
     env/{.env,.env.production}
-    config/{compose.yml,compose.dev.yml,compose.demo.yml,compose.prod.yml,docker/,nginx/}
+    config/{compose.yml,compose.dev.yml,compose.demo.yml,compose.prod.yml,docker/}
     manifest.txt
 ```
 
@@ -384,7 +384,8 @@ deployment/restore.sh --env production              # then do it for real
   by Leinaflow's own containers" (fine, expected on a re-run) from "in use by
   something else" (fails with the specific port). Free the port or change it
   in `.env` (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT`, dev
-  only — demo/production only bind 80/443).
+  only — demo/production don't publish any ports to the host by default,
+  see [deployment/Architecture.md#networking](deployment/Architecture.md#networking)).
 - **Migration fails on deploy/install/update**: check `dc logs backend` (or
   `docker compose logs backend`), then re-run `deployment/deploy.sh`,
   `deployment/install.sh` or `deployment/update.sh` — migrations are safe to
@@ -399,8 +400,9 @@ deployment/restore.sh --env production              # then do it for real
   in the final `[FAIL]` line and encoded in the exit code (see
   [above](#the-deployment-engine-deploysh)) — `2` means look at git state,
   `4` means look at `dc logs backend` for the migration, `6` means the
-  containers are up but `curl` against nginx got the wrong response.
-  `deployment/status.sh --env <env>` shows what's actually running right now.
+  containers are up but the in-container HTTP check against backend/frontend
+  got the wrong response. `deployment/status.sh --env <env>` shows what's
+  actually running right now.
 
 ## COC integration
 

@@ -68,7 +68,7 @@ non-interactively (for scripted/COC use). Every snapshot under
 `backups/YYYY-MM-DD-HHMM/` (created by `deployment/backup.sh`, and always run
 before `deploy.sh` per [Production.md](Production.md#before-every-deploy))
 contains the database dump, media archive, `.env`/`.env.production`, and the
-compose/nginx config that produced it — so a restore also puts the compose
+compose/docker config that produced it — so a restore also puts the compose
 files back to the state that matched that backup, not just the data.
 
 ## Prisma migration caveats

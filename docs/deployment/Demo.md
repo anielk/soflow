@@ -2,9 +2,9 @@
 
 Demo runs the exact same build as production: compiled Next.js output
 (`next build` + `next start`), compiled NestJS output (`node dist/main`), no
-bind mounts, no hot reload, behind nginx. Its entire purpose is to make
-performance testing and acceptance review representative of what production
-will actually run.
+bind mounts, no hot reload. Its entire purpose is to make performance
+testing and acceptance review representative of what production will
+actually run.
 
 ## Deploy
 
@@ -19,7 +19,9 @@ Prefer `deployment/install.sh --env demo` (first install) /
 `deployment/deploy.sh --env demo` (subsequent releases) over calling
 `docker compose` directly on a real host — they also handle Prisma
 migrations, seeding, health verification, and (for `deploy.sh`) a real HTTP
-smoke test through nginx. See [../Deployment.md](../Deployment.md).
+smoke test, checked from inside the frontend/backend containers rather than
+through any particular reverse proxy topology. See
+[../Deployment.md](../Deployment.md).
 
 ## What's running
 
@@ -27,8 +29,12 @@ smoke test through nginx. See [../Deployment.md](../Deployment.md).
 |---|---|---|---|
 | frontend | `production` | `npm run start` | internal only (`expose: 3000`) |
 | backend | `production` | `node dist/main` | internal only (`expose: 4000`) |
-| nginx | `nginx:1.27-alpine` | — | published `80`/`443` |
 | postgres / redis | — | — | internal only |
+
+Nothing is published to the host by default — see
+[Architecture.md#networking](Architecture.md#networking) for how a reverse
+proxy (infrastructure, not part of this repo) is expected to reach
+frontend/backend.
 
 frontend/backend containers run `read_only: true` with a `tmpfs` `/tmp`, as
 non-root (`1000:1000`) — same as production.

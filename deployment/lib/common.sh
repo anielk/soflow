@@ -223,8 +223,8 @@ sync_history_json() {
 
 # fetch_backend_health_report [timeout] — fetches the backend's real
 # /v1/health JSON from inside its own container (works identically in
-# development/demo/production — no dependency on nginx or the host's
-# network, unlike the public /api/v1/health smoke test deploy.sh runs) and
+# development/demo/production — no dependency on how, or whether, a reverse
+# proxy or published host port reaches it) and
 # prints it as: line 1 = overall status, line 2 = uptimeSeconds, then one
 # "name<TAB>status" line per check (see HealthReport in
 # backend/src/health/health.service.ts — this is that same contract).
@@ -345,8 +345,8 @@ parse_common_flags() {
 #
 # development -> compose.yml + compose.dev.yml (hot-reload, bind mounts,
 #   published dev ports)
-# demo        -> compose.yml + compose.demo.yml (production build, nginx,
-#   no published app ports)
+# demo        -> compose.yml + compose.demo.yml (production build, no ports
+#   published to the host by default — see check_ports above)
 # production  -> compose.yml + compose.prod.yml (identical build/runtime
 #   config to demo — see docs/deployment/Architecture.md — only the
 #   per-host .env / .env.production content differs)
@@ -484,8 +484,8 @@ wait_for_http_ok() {
 # wait_for_service_healthy <service> [timeout] — poll Docker's own
 # HEALTHCHECK status (not an HTTP check) until "healthy" or the timeout
 # elapses. Every service in compose.yml defines a healthcheck (postgres,
-# redis, backend, frontend, plus nginx in demo/prod — see
-# docs/deployment/Architecture.md#healthchecks), so this is the one thing
+# redis, backend, frontend — see docs/deployment/Architecture.md#healthchecks),
+# so this is the one thing
 # deploy.sh, rollback.sh and status.sh all need and none of the existing
 # scripts expose as a shared helper (install.sh has its own near-identical
 # local copy predating this one — not unified here to avoid touching a
@@ -611,6 +611,15 @@ port_in_use() {
 # check_ports — validates the ports the resolved DEPLOY_ENV will bind are
 # free. If Leinaflow's own containers already exist, a bound port is
 # expected (idempotent re-run) rather than a conflict.
+#
+# demo/production publish nothing to the host by default (see
+# compose.demo.yml/compose.prod.yml — frontend/backend only `expose`
+# internally on creator-network). Reaching them is an infrastructure
+# decision this repo doesn't make: a reverse proxy (e.g. Nginx Proxy
+# Manager) either joins creator-network directly (preferred — no host port
+# needed) or a host-specific compose override publishes whatever ports it
+# needs. Since Leinaflow's own tracked compose files bind nothing in those
+# environments, there's nothing here to check.
 check_ports() {
   local already_installed=0
   if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${RESOURCE_PREFIX}-"; then
@@ -621,7 +630,8 @@ check_ports() {
   if [[ "${DEPLOY_ENV}" == "development" ]]; then
     ports=("${FRONTEND_PORT:-3000}" "${BACKEND_PORT:-4000}" "${POSTGRES_PORT:-5432}" "${REDIS_PORT:-6379}")
   else
-    ports=(80 443)
+    log_info "No ports published to the host by default in '${DEPLOY_ENV}' — nothing to check here (see comment above)."
+    return 0
   fi
 
   local conflict=0

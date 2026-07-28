@@ -80,7 +80,6 @@ fi
 # ── Per-service container state/health ──────────────────────────────────────
 
 SERVICES=(postgres redis backend frontend)
-[[ "${DEPLOY_ENV}" != "development" ]] && SERVICES+=(nginx)
 
 SERVICE_STATE=(); SERVICE_HEALTH=()
 declare -A SVC_HEALTH_MAP
@@ -107,8 +106,9 @@ done
 # comment) — it says nothing about the database or storage specifically.
 # For those two, fetch the backend's real /v1/health report instead (same
 # HealthReport contract backend/src/health/health.service.ts computes) —
-# from inside its own container, so this works the same in development
-# (no nginx) as in demo/production. Only attempted if the container is
+# from inside its own container, so this works identically in every
+# environment regardless of how (or whether) a reverse proxy in front of it
+# is set up. Only attempted if the container is
 # actually running, with a short timeout, and never fails this script if
 # it can't be reached — an unreachable backend just means these read as
 # false/unknown, same as everything else status.sh reports.

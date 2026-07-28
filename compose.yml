@@ -79,7 +79,7 @@ services:
       # Liveness only: any response means the Nest process is up and
       # listening. /v1/health's body reports 503 when an optional
       # dependency (e.g. the SMTP relay) is unreachable — that's real,
-      # actionable information for monitoring, but frontend/nginx's startup
+      # actionable information for monitoring, but frontend's startup
       # order shouldn't be gated on it, or a notification-provider outage
       # would block the whole stack from starting.
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/v1/health', () => process.exit(0)).on('error', () => process.exit(1))"]

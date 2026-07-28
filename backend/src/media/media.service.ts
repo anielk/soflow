@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import { Readable } from 'stream';
@@ -11,6 +11,7 @@ import { ListMediaQueryDto } from './dto/list-media-query.dto';
 import { RenameMediaDto } from './dto/rename-media.dto';
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
+import { resolveUploadLimitMb } from './upload-limits';
 
 const MANAGE_ROLES: Role[] = [Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN];
 const OWNER_SELECT = { id: true, name: true, email: true } satisfies Prisma.UserSelect;
@@ -94,6 +95,7 @@ export class MediaService {
 
   private async processUpload(file: Express.Multer.File, userId: string, creatorId?: string): Promise<MediaResponse> {
     const workspaceId = await this.resolveWorkspaceId(userId);
+    await this.assertWithinUploadLimit(workspaceId, file.size);
     if (creatorId) await this.assertCreatorInWorkspace(workspaceId, creatorId);
     const validated = await validateUploadedFile(file.originalname, file.path);
 
@@ -158,6 +160,22 @@ export class MediaService {
     });
 
     return this.toResponse(updated);
+  }
+
+  /**
+   * The real, business-facing upload cap — plan-based (see upload-limits.ts),
+   * not the flat MEDIA_MAX_FILE_SIZE_MB Multer ceiling in media.module.ts,
+   * which only exists as a technical backstop above the largest plan limit.
+   */
+  private async assertWithinUploadLimit(workspaceId: string, fileSizeBytes: number): Promise<void> {
+    const workspace = await this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
+      select: { plan: true, maxUploadSizeMb: true },
+    });
+    const limitMb = resolveUploadLimitMb(workspace.plan, workspace.maxUploadSizeMb);
+    if (fileSizeBytes > limitMb * 1024 * 1024) {
+      throw new PayloadTooLargeException(`File exceeds this workspace's ${limitMb}MB upload limit.`);
+    }
   }
 
   /** Throws NotFoundException rather than leaking whether a creator ID exists in a different workspace. */

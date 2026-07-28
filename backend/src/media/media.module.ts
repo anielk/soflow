@@ -32,6 +32,15 @@ import { ThumbnailService } from './thumbnail.service';
             },
             filename: (_req, file, cb) => cb(null, `${randomUUID()}${path.extname(file.originalname)}`),
           }),
+          // Hard technical ceiling — enforced here, not by a reverse proxy
+          // (no infrastructure component in front of this app is assumed or
+          // relied on for request-size limits; see
+          // docs/deployment/Architecture.md). This is a backstop above the
+          // largest plan limit, not the real business-facing cap: Multer's
+          // options are fixed at bootstrap, so they can't vary per workspace.
+          // The actual per-plan limit (see MediaService.assertWithinUploadLimit
+          // and media/upload-limits.ts) is checked afterwards, once the
+          // uploading workspace is known.
           limits: { fileSize: maxFileSizeMb * 1024 * 1024 },
         };
       },

@@ -8,7 +8,7 @@ Production-ready local development and deployment foundation for a scalable crea
 - Database: PostgreSQL
 - Cache/Realtime foundation: Redis
 - Runtime: Docker + Docker Compose
-- Reverse proxy: NGINX-ready configuration
+- Reverse proxy: infrastructure-level, operator's choice (Nginx Proxy Manager, Traefik, Caddy, HAProxy, Cloudflare Tunnel, ...), not part of this repo — see [docs/deployment/Architecture.md](docs/deployment/Architecture.md#where-infrastructure-ends-and-leinaflow-begins)
 
 ## 2) Project Structure
 ```text
@@ -16,7 +16,6 @@ creator-platform/
 ├── frontend/                 # Next.js app
 ├── backend/                  # NestJS app + Prisma
 ├── docker/                   # Dockerfiles
-├── nginx/                    # Reverse proxy config
 ├── scripts/                  # Utility scripts
 ```
 

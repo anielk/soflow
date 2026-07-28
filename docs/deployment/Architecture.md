@@ -9,9 +9,48 @@ the overlay file and the per-host `.env` / `.env.production` content.
 compose.yml            <- services, networks, volumes, healthchecks,
                            restart policies, security options (all envs)
   + compose.dev.yml     -> development: hot reload, bind mounts, published ports
-  + compose.demo.yml    -> demo: production build, nginx, read-only containers
+  + compose.demo.yml    -> demo: production build, read-only containers
   + compose.prod.yml    -> production: identical to demo
 ```
+
+## Where infrastructure ends and Leinaflow begins
+
+```
+Internet
+    │
+Reverse proxy (infrastructure — TLS, DNS, operator's choice)
+    │
+──────────────────────────────────────────────
+Leinaflow (this repo)
+──────────────────────────────────────────────
+Frontend (Next.js)  :3000
+Backend  (NestJS)   :4000
+PostgreSQL
+Redis
+Storage
+```
+
+Leinaflow does not deploy, configure, or manage a reverse proxy. There used
+to be an internal nginx container between the public entry point and
+frontend/backend — it was removed as a deliberate architectural
+simplification (duplicate proxy logic, an extra health check, an extra
+point of failure). A reverse proxy — whichever one the operator chooses
+(Nginx Proxy Manager, Traefik, Caddy, HAProxy, Cloudflare Tunnel, ...) — is
+infrastructure that sits in front of this stack, not a service this repo
+defines. What used to be the internal nginx's job now
+lives either upstream (TLS, DNS, public routing — infrastructure's
+responsibility) or inside the application itself:
+
+- **Security headers** (`X-Frame-Options`, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy`, ...) are set by the frontend
+  itself, in [frontend/next.config.mjs](../../frontend/next.config.mjs)'s
+  `headers()` — not by an infrastructure component in front of it.
+- **Upload size limits** are enforced by the backend's own Multer
+  configuration (`MEDIA_MAX_FILE_SIZE_MB`, see
+  [backend/src/media/media.module.ts](../../backend/src/media/media.module.ts)),
+  not by a proxy's `client_max_body_size`.
+- **TLS, DNS, and public routing** are the reverse proxy's job — outside
+  this repo entirely.
 
 Overlays only ever touch `build.target`, `command`/image defaults,
 `volumes`, `environment`, and `ports`/`expose` — everything else (service
@@ -116,17 +155,31 @@ papering over — both required to actually run `docker compose -f compose.yml
 
 ## Networking
 
-All services share one bridge network, `creator-network`; containers reach
-each other by service name (`http://backend:4000`, `postgres:5432`, ...).
+All services share one bridge network, `creator-network` (Docker resource
+name: `${PROJECT_NAME:-creator}-network`); containers reach each other by
+service name (`http://backend:4000`, `postgres:5432`, ...).
 
 - **Development**: frontend/backend/postgres/redis ports are published to
   the host (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from
   `.env`) for local tooling (psql, Redis CLI, browser). `mailhog` also
   publishes its web UI on `8025`.
 - **Demo/production**: frontend and backend only `expose` their ports
-  internally; nginx is the sole container publishing to the host (`80`/`443`)
-  and reverse-proxies to both. Postgres/Redis are not reachable from outside
-  Docker at all.
+  internally — nothing is published to the host by default. Postgres/Redis
+  are never reachable from outside Docker.
+
+  Leinaflow deliberately doesn't decide how a reverse proxy reaches
+  frontend/backend in demo/production — that's an infrastructure topology
+  choice, not something the app should hardcode:
+  - **Preferred**: the reverse proxy joins `creator-network` directly and
+    reaches the containers by service name
+    (`frontend:3000`, `backend:4000`) — no host port involved at all.
+  - **When required**: a host-specific compose override (outside this
+    repo's tracked files) publishes whatever ports that deployment needs.
+
+  Either way, `deployment/healthcheck.sh` and `deployment/deploy.sh`'s smoke
+  tests check frontend/backend from inside their own containers (see
+  `deployment/lib/common.sh#http_check_in_container`), so they pass
+  regardless of which topology a given host uses.
 
 ## Security posture
 
@@ -135,16 +188,16 @@ each other by service name (`http://backend:4000`, `postgres:5432`, ...).
 | Filesystem | writable (bind mounts) | `read_only: true` + `tmpfs` for `/tmp` |
 | User | container default (root-equivalent build tools) | `1000:1000` (non-root) |
 | `no-new-privileges` | yes | yes |
-| Published ports | app ports directly | only nginx (`80`/`443`) |
+| Published ports | app ports directly | none by default — see [Networking](#networking) |
 | Build target | `development` | `production` |
+| Security headers | set by Next.js (`frontend/next.config.mjs`) | set by Next.js (`frontend/next.config.mjs`) |
+| Upload size limit | Multer (`MEDIA_MAX_FILE_SIZE_MB`) | Multer (`MEDIA_MAX_FILE_SIZE_MB`) |
 
 `tmpfs` mounts for the non-root (`1000:1000`) demo/production containers
-(backend's `/tmp` + `/app/node_modules/.cache`, frontend's `/tmp`, nginx's
-`/tmp` + `/var/cache/nginx` + `/var/run`) are declared via the long-form
-`volumes: - type: tmpfs` syntax with an explicit `mode: 0o1777` — Docker's
-tmpfs default is `root:root 0755`, which a non-root process can't write
-into. Without this, nginx fails at startup (`mkdir() "/var/cache/nginx/..."
-failed: Permission denied`) and crash-loops.
+(backend's `/tmp` + `/app/node_modules/.cache`, frontend's `/tmp`) are
+declared via the long-form `volumes: - type: tmpfs` syntax with an explicit
+`mode: 0o1777` — Docker's tmpfs default is `root:root 0755`, which a
+non-root process can't write into.
 
 On a host that previously ran the `media_storage` volume as a root-owned
 dev container before switching that same host to demo/production, the
@@ -166,20 +219,18 @@ report readiness:
 | redis | `redis-cli ping` |
 | backend | `GET /v1/health` responds at all (liveness — see note below) |
 | frontend | `GET /` returns < 400 (Node's built-in `http` — the image ships no curl/wget) |
-| nginx (demo/prod only) | `wget --spider http://localhost/` |
 
-`frontend` depends on `backend` with `condition: service_healthy`, and in
-demo/prod `nginx` depends on both with `condition: service_healthy` — so
-`docker compose up -d` only reports a service "started" once it's actually
-answering requests, not just once its process has launched.
+`frontend` depends on `backend` with `condition: service_healthy` — so
+`docker compose up -d` only reports frontend "started" once backend is
+actually answering requests, not just once its process has launched.
 
 **Backend healthcheck is liveness-only, not the full `/v1/health` body.**
 `/v1/health` aggregates several sub-checks (database, redis, storage,
 notification provider, ...) and returns HTTP 503 if *any* of them is down —
 including optional ones like the SMTP relay. If the container healthcheck
 required a 2xx from that endpoint, an SMTP outage would mark backend
-unhealthy, which would then block frontend and nginx from ever starting
-(their `service_healthy` dependency would never clear). The Docker-level
+unhealthy, which would then block frontend from ever starting (its
+`service_healthy` dependency would never clear). The Docker-level
 check instead only confirms the HTTP server responds at all — "is the
 process alive," not "are all upstream dependencies perfect." The detailed
 `/v1/health` body remains available for monitoring/alerting to inspect
@@ -216,10 +267,12 @@ Note this only covers **naming**, not port collisions: `FRONTEND_PORT`/
 `BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` still default to
 `3000`/`4000`/`5432`/`6379` in development, so two products sharing one
 development host still need distinct values set in each product's own
-`.env`. Demo/production don't have this problem — only nginx publishes
-ports there (`80`/`443`), so co-hosting multiple products still requires
-either separate hosts (recommended) or a shared reverse proxy in front of
-each product's own nginx, which is out of scope for this change.
+`.env`. Demo/production don't have this problem the same way — nothing is
+published to the host by default there (see [Networking](#networking)), so
+co-hosting multiple products just means the shared reverse proxy joins each
+product's own `creator-network`-equivalent and routes to each by service
+name; that reverse proxy's own configuration is infrastructure, out of
+scope for this repo.
 
 ## Notes for other Cloudivo products adopting this standard
 

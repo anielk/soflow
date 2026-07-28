@@ -211,8 +211,9 @@ deliberately shallow); `database_reachable` and `storage_healthy` come from
 the backend's own real `/v1/health` report (a live `SELECT 1` and a real
 storage write/read/delete probe — see
 `backend/src/health/health.service.ts`), fetched from inside the backend's
-own container so this works identically in development (no nginx) and
-demo/production. If the backend isn't running or doesn't respond in time,
+own container so this works identically in every environment, regardless of
+how (or whether) a reverse proxy in front of it is set up. If the backend
+isn't running or doesn't respond in time,
 these read `false`/`null` — never a false `true`.
 
 **`deployment/history.json`** — every deploy/rollback attempt ever
