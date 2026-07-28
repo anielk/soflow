@@ -91,8 +91,9 @@ export default function CommunicationPage() {
         ) : config ? (
           <dl className="divide-y divide-bg-border/40">
             {[
+              { label: 'Status', value: config.enabled ? 'Enabled' : 'Disabled — no provider configured' },
               { label: 'Driver', value: config.driver.toUpperCase() },
-              { label: 'Host', value: config.smtpHost },
+              { label: 'Host', value: config.smtpHost || '— (not set)' },
               { label: 'Port', value: String(config.smtpPort) },
               { label: 'Encryption', value: config.smtpSecure ? 'TLS' : 'None (STARTTLS if offered)' },
               { label: 'Authentication', value: config.smtpUserConfigured ? 'Configured' : 'Not configured' },
@@ -113,9 +114,18 @@ export default function CommunicationPage() {
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-text-primary">Send a test email</h2>
         <p className="text-xs text-text-muted mt-0.5 mb-4">
-          Verifies the SMTP connection and sends a real email to your own account&apos;s address.
+          {config?.enabled === false
+            ? 'No notification provider is configured on this instance — set NOTIFICATION_DRIVER=smtp and SMTP_HOST to enable sending.'
+            : "Verifies the SMTP connection and sends a real email to your own account's address."}
         </p>
-        <Button variant="primary" size="md" icon={Send} loading={testing} onClick={handleSendTest}>
+        <Button
+          variant="primary"
+          size="md"
+          icon={Send}
+          loading={testing}
+          disabled={config?.enabled === false}
+          onClick={handleSendTest}
+        >
           Send test email
         </Button>
         {testResult && (

@@ -44,7 +44,8 @@ export class NotificationController {
     this.assertSuperAdmin(req);
     return {
       driver: this.configService.get<string>('NOTIFICATION_DRIVER', 'smtp'),
-      smtpHost: this.configService.get<string>('SMTP_HOST', 'localhost'),
+      enabled: this.notificationService.isEnabled(),
+      smtpHost: this.configService.get<string>('SMTP_HOST', ''),
       smtpPort: this.configService.get<number>('SMTP_PORT', 587),
       smtpSecure: this.configService.get<boolean>('SMTP_SECURE', false),
       smtpUserConfigured: Boolean(this.configService.get<string>('SMTP_USER', '')),

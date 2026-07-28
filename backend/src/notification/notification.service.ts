@@ -51,6 +51,17 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Whether an actual provider is configured (vs. DisabledNotificationProvider
+   * having been wired in — see NotificationModule's factory). HealthService
+   * uses this to report the notification provider as `not_configured`
+   * without ever attempting a connection; the Communication settings page
+   * uses it to explain why "Send test email" won't work.
+   */
+  isEnabled(): boolean {
+    return this.provider.isConfigured;
+  }
+
   /** Confirms the configured provider is reachable — powers the Communication settings "Test Email" check. */
   async verifyConnection(): Promise<void> {
     try {

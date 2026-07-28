@@ -18,6 +18,14 @@ export interface NotificationProvider {
   send(message: NotificationMessage): Promise<void>;
   /** Confirms the provider can actually reach its backend (e.g. SMTP handshake) — used by the Communication settings "Test Email" flow. */
   verifyConnection(): Promise<void>;
+  /**
+   * Whether an operator has actually configured this provider (vs. it being
+   * selected only because it's the default). HealthService checks this
+   * before ever calling verifyConnection() — a provider that reports
+   * `false` here must never trigger a DNS lookup or connection attempt just
+   * to answer a health check.
+   */
+  readonly isConfigured: boolean;
 }
 
 export const NOTIFICATION_PROVIDER = Symbol('NOTIFICATION_PROVIDER');

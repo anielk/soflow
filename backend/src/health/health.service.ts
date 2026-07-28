@@ -35,6 +35,16 @@ const STATUS_SEVERITY: Record<HealthStatus, number> = {
  * (COC)) are reported as `planned` so COC can later render "not built yet"
  * rather than a false negative.
  *
+ * Only CRITICAL_CHECKS below (api, database, redis, storage) feed `overall`
+ * (and therefore HealthController's HTTP 503) — every other check
+ * (notification_provider, and the still-`planned` future ones) is real,
+ * reported honestly, and always visible in `checks`, but can never drag
+ * `overall` down. Notification in particular must never block a deploy or
+ * fail a healthcheck just because no mail relay is configured (see
+ * checkNotification) or, for that matter, because a configured one is
+ * temporarily unreachable — that's an operator-visible signal, not an
+ * outage of Leinaflow itself.
+ *
  * This is the foundation COC will poll (see the COC preparation notes in
  * Sprint 5D's report) — the shape of HealthReport is the contract, not this
  * sprint's HTTP transport.
@@ -51,22 +61,19 @@ export class HealthService {
   ) {}
 
   async check(): Promise<HealthReport> {
-    const checks = await Promise.all([
-      this.checkApi(),
-      this.checkDatabase(),
-      this.checkRedis(),
-      this.checkStorage(),
-      this.checkNotification(),
-      ...this.futureChecks(),
-    ]);
+    const criticalChecks = await Promise.all([this.checkApi(), this.checkDatabase(), this.checkRedis(), this.checkStorage()]);
+    const optionalChecks = await Promise.all([this.checkNotification(), ...this.futureChecks()]);
 
-    const overall = checks.reduce<HealthStatus>((worst, c) => (STATUS_SEVERITY[c.status] > STATUS_SEVERITY[worst] ? c.status : worst), 'ok');
+    // `overall` — and therefore HealthController's 503 — is decided by
+    // criticalChecks alone. optionalChecks are appended to the report for
+    // visibility but never participate in this reduce.
+    const overall = criticalChecks.reduce<HealthStatus>((worst, c) => (STATUS_SEVERITY[c.status] > STATUS_SEVERITY[worst] ? c.status : worst), 'ok');
 
     return {
       status: overall,
       timestamp: new Date().toISOString(),
       uptimeSeconds: Math.round(process.uptime()),
-      checks,
+      checks: [...criticalChecks, ...optionalChecks],
     };
   }
 
@@ -109,7 +116,23 @@ export class HealthService {
     });
   }
 
+  // Optional by design: not one of the four critical checks (api, database,
+  // redis, storage — see the class doc comment). Reported as
+  // `not_configured` — not `down` — whenever no provider is actually
+  // configured (NOTIFICATION_DRIVER=disabled, or "smtp" with SMTP_HOST left
+  // blank), and crucially without ever calling verifyConnection() in that
+  // case: that's what keeps a demo/production host with no mail relay set
+  // up from triggering a DNS lookup/connection attempt just to answer a
+  // health check, and from ever surfacing as HTTP 503 (see STATUS_SEVERITY —
+  // `not_configured` carries the same severity as `ok`).
   private checkNotification(): Promise<HealthCheckResult> {
+    if (!this.notificationService.isEnabled()) {
+      return Promise.resolve({
+        name: 'notification_provider',
+        status: 'not_configured',
+        message: 'No notification provider configured — set NOTIFICATION_DRIVER=smtp and SMTP_HOST to enable.',
+      });
+    }
     return this.timed('notification_provider', async () => {
       await this.notificationService.verifyConnection();
     });

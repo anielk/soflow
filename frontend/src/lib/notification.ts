@@ -33,6 +33,7 @@ export async function submitContactForm(input: ContactFormInput): Promise<void> 
 
 export interface NotificationConfig {
   driver: string;
+  enabled: boolean;
   smtpHost: string;
   smtpPort: number;
   smtpSecure: boolean;

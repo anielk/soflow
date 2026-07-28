@@ -27,13 +27,23 @@ export const envValidationSchema = Joi.object({
   RATE_LIMIT_TTL_MS: Joi.number().default(60000),
   RATE_LIMIT_MAX: Joi.number().default(300),
 
-  // Notifications — "smtp" is the only implemented driver today; the app is
+  // Notifications — "smtp" is the only implemented channel today; the app is
   // structured so teams/slack/discord/push/sms can be added as new
   // NotificationProvider implementations without touching call sites.
-  NOTIFICATION_DRIVER: Joi.string().valid('smtp').default('smtp'),
+  // "disabled" (or "smtp" with SMTP_HOST left blank) runs with no
+  // notification provider at all — see NotificationModule's factory and
+  // DisabledNotificationProvider. Never required for the app to start: a
+  // host with no mail relay configured yet must still deploy and report
+  // healthy.
+  NOTIFICATION_DRIVER: Joi.string().valid('smtp', 'disabled').default('smtp'),
   NOTIFICATION_TEAM_EMAIL: Joi.string().email({ tlds: false }).default('hello@leinaflow.com'),
 
-  SMTP_HOST: Joi.string().default('localhost'),
+  // Left blank on purpose (unlike every other default here) — a non-empty
+  // value is what NotificationModule/SmtpProvider treat as "an operator
+  // actually configured this", so a placeholder host would make the
+  // notification_provider health check attempt a real connection instead of
+  // reporting itself not_configured.
+  SMTP_HOST: Joi.string().allow('').default(''),
   SMTP_PORT: Joi.number().default(587),
   SMTP_SECURE: Joi.boolean().default(false),
   SMTP_USER: Joi.string().allow('').default(''),
