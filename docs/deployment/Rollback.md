@@ -41,7 +41,7 @@ The manual equivalent, if you need it (a fresh host with no
 git log --oneline -10                 # find the last-known-good commit
 git checkout --detach <good-commit-or-tag>
 
-docker compose -f compose.yml -f compose.prod.yml up -d --build
+docker compose --env-file .env.production -f compose.yml -f compose.prod.yml up -d --build
 deployment/healthcheck.sh --env production
 ```
 
@@ -67,9 +67,10 @@ deployment/restore.sh --env production              # pick a backup interactivel
 non-interactively (for scripted/COC use). Every snapshot under
 `backups/YYYY-MM-DD-HHMM/` (created by `deployment/backup.sh`, and always run
 before `deploy.sh` per [Production.md](Production.md#before-every-deploy))
-contains the database dump, media archive, `.env`/`.env.production`, and the
-compose/docker config that produced it — so a restore also puts the compose
-files back to the state that matched that backup, not just the data.
+contains the database dump, media archive, the resolved environment's one
+env file (`.env.development` or `.env.production`), and the compose/docker
+config that produced it — so a restore also puts the compose files back to
+the state that matched that backup, not just the data.
 
 ## Prisma migration caveats
 

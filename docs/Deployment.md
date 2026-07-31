@@ -39,10 +39,12 @@ deployment/install.sh --env production
 
 That single command: detects your OS, verifies internet connectivity,
 installs Docker/Compose if needed, validates ports, creates the backups
-folder and media volume, creates `.env` from the template if missing,
-validates the environment, builds and starts everything, runs Prisma
-generate/migrate/seed, and verifies backend/frontend/database/media are all
-healthy before printing a summary.
+folder and media volume, creates this environment's one env file
+(`.env.production` for demo/production, `.env.development` for development —
+see [deployment/Architecture.md](deployment/Architecture.md)) from its
+template if missing, validates the environment, builds and starts
+everything, runs Prisma generate/migrate/seed, and verifies
+backend/frontend/database/media are all healthy before printing a summary.
 
 Re-running `install.sh` on an already-installed host is safe — every step
 checks whether it's already done before acting.
@@ -70,7 +72,7 @@ above. No install logic is duplicated between the two.
 | 3 | `03-install-docker.sh` | Docker + Compose install, enable service, verify |
 | 4 | `04-install-git.sh` | git readiness (`safe.directory` for running as root) |
 | 5 | `05-clone-project.sh` | Clone the repo, or `git pull` if already cloned |
-| 6 | `06-create-env.sh` | Generate secrets, create missing `.env` files, validate |
+| 6 | `06-create-env.sh` | Generate secrets, create the missing env file, validate |
 | 7 | `07-install-leinaflow.sh` | Runs `deployment/install.sh` |
 | 8 | `08-healthcheck.sh` | Runs `deployment/healthcheck.sh` |
 | 9 | `09-summary.sh` | Final summary: URLs, DB/Redis/media, Docker + project version |
@@ -103,8 +105,8 @@ stub itself remains to be written, later, alongside COC.
 
 `deploy.sh` is the **Cloudivo Deployment Engine v1** — the official release
 mechanism for demo and production (development isn't a `deploy.sh` target;
-it's driven directly via `docker compose -f compose.yml -f compose.dev.yml
-up`). It supersedes `update.sh` for releases: same rebuild/migrate/restart
+it's driven directly via `docker compose --env-file .env.development -f
+compose.yml -f compose.dev.yml up`). It supersedes `update.sh` for releases: same rebuild/migrate/restart
 core, but git-reset-based (not `pull --ff-only`), with real smoke tests,
 per-stage exit codes, a deployed-commit/duration summary, and a persisted
 history log `rollback.sh`, `status.sh` and `history.sh` all read.
@@ -241,13 +243,13 @@ All scripts live in `deployment/` and share two flags:
 | `history.sh` | Read-only deployment history table from `.deploy-history.log`: timestamp, environment, commit, branch, duration, result, rollback info. `--json` for machine consumption (same shape `deployment/history.json` is regenerated in). |
 | `rollback.sh` | Code rollback to a prior successfully-deployed commit. `--to <ref>`, `--data-rollback` to print (not run) the data-rollback flow. `--force` required if the checkout has uncommitted changes. |
 | `update.sh` | The original release path: `git pull` (if applicable) → rebuild → restart → migrate → health check. Still works, still supports `development`; prefer `deploy.sh` for demo/production releases going forward. |
-| `backup.sh` | Snapshot database, media, `.env`, and compose/docker config into `backups/YYYY-MM-DD-HHMM/`. Prints the backup path. |
+| `backup.sh` | Snapshot database, media, the resolved environment's env file, and compose/docker config into `backups/YYYY-MM-DD-HHMM/`. Prints the backup path. |
 | `restore.sh` | Interactively restore a backup. `--backup <dir>` to pick one non-interactively, `--dry-run` to preview without touching anything. |
 | `healthcheck.sh` | PASS/FAIL check of Docker, all containers, Postgres, Redis, backend, frontend, disk, and media storage. Exit code 0/1. |
 | `uninstall.sh` | Stop and remove containers. `--remove-volumes` to also delete data (typed confirmation required), `--delete-backups` to also wipe backups. `--dry-run` supported. |
 | `env-check.sh` | Standalone host/environment audit — Docker/Compose versions, disk/memory/CPU, permissions, required env vars, media path. Also run automatically as part of `install.sh` and as `deploy.sh`'s first step. |
 
-Shared logic (logging, OS/compose detection, `.env` loading, confirmation
+Shared logic (logging, OS/compose detection, env-file resolution, confirmation
 prompts, health polling) lives in `deployment/lib/common.sh`, sourced by
 every script above — it's a library, not meant to be run directly.
 
@@ -255,7 +257,7 @@ every script above — it's a library, not meant to be run directly.
 
 | Environment | Compose files | Notes |
 |---|---|---|
-| `development` | `compose.yml` + `compose.dev.yml` | Hot-reload, bind mounts, ports published directly (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from `.env`). Seeded by default. |
+| `development` | `compose.yml` + `compose.dev.yml` | Hot-reload, bind mounts, ports published directly (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from `.env.development`). Seeded by default. |
 | `demo` | `compose.yml` + `compose.demo.yml` | Built images, nothing published to the host by default — see [deployment/Architecture.md#networking](deployment/Architecture.md#networking). Seeded by default. |
 | `production` | `compose.yml` + `compose.prod.yml` | Functionally identical to demo (see [docs/deployment/Architecture.md](deployment/Architecture.md)), but **seeding is skipped by default** (the seed creates known demo credentials — pass `--seed` to `install.sh` to force it). |
 
@@ -277,9 +279,19 @@ See [docs/deployment/](deployment/) for the full per-environment guides (Develop
 
 ## Environment variables
 
-Read from the project-root `.env` (created by `install.sh` from
-`.env.production.example` if missing — see `backend/src/config/env.validation.ts`
-for the authoritative list of what the backend itself requires).
+Each environment reads exactly one env file — never Compose's own implicit
+`.env`-in-cwd lookup, always passed explicitly via `--env-file` (see
+`deployment/lib/common.sh`'s `env_file_for`/`dc`, and
+[deployment/Architecture.md](deployment/Architecture.md)):
+
+| `DEPLOY_ENV` | File | Template |
+|---|---|---|
+| `development` | `.env.development` | `.env.development.example` |
+| `demo` / `production` | `.env.production` (one copy per host) | `.env.production.example` |
+
+`install.sh` creates the relevant one from its template if missing (see
+`backend/src/config/env.validation.ts` for the authoritative list of what
+the backend itself requires).
 
 | Variable | Required | Purpose |
 |---|---|---|
@@ -339,7 +351,7 @@ backups/
   2026-07-02-1500/
     db.sql
     media.tar.gz
-    env/{.env,.env.production}
+    env/{.env.development or .env.production, whichever this environment uses}
     config/{compose.yml,compose.dev.yml,compose.demo.yml,compose.prod.yml,docker/}
     manifest.txt
 ```
@@ -383,9 +395,9 @@ deployment/restore.sh --env production              # then do it for real
 - **Port already in use during install**: `install.sh` distinguishes "in use
   by Leinaflow's own containers" (fine, expected on a re-run) from "in use by
   something else" (fails with the specific port). Free the port or change it
-  in `.env` (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT`, dev
-  only — demo/production don't publish any ports to the host by default,
-  see [deployment/Architecture.md#networking](deployment/Architecture.md#networking)).
+  in `.env.development` (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/
+  `REDIS_PORT`, dev only — demo/production don't publish any ports to the
+  host by default, see [deployment/Architecture.md#networking](deployment/Architecture.md#networking)).
 - **Migration fails on deploy/install/update**: check `dc logs backend` (or
   `docker compose logs backend`), then re-run `deployment/deploy.sh`,
   `deployment/install.sh` or `deployment/update.sh` — migrations are safe to

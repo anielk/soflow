@@ -5,8 +5,11 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
     restart: unless-stopped
-    env_file:
-      - .env.production
+    # No env_file here on purpose — which file supplies runtime env is
+    # environment-specific (see compose.dev.yml/compose.demo.yml/
+    # compose.prod.yml, each of which adds its own single env_file entry).
+    # A shared default here would be silently wrong for whichever
+    # environment(s) don't match it — see docs/deployment/Architecture.md.
     depends_on:
       backend:
         condition: service_healthy
@@ -27,8 +30,7 @@ services:
       context: .
       dockerfile: docker/backend.Dockerfile
     restart: unless-stopped
-    env_file:
-      - .env.production
+    # No env_file here on purpose — see the frontend service's comment above.
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -92,8 +94,10 @@ services:
     container_name: ${PROJECT_NAME:-creator}-postgres
     image: postgres:16-alpine
     restart: unless-stopped
-    env_file:
-      - .env
+    # No env_file: every var Postgres actually needs (DB/user/password) is
+    # already explicit below via ${...} interpolation, which itself now
+    # comes from the environment-specific --env-file (see dc() in
+    # deployment/lib/common.sh) — nothing else here reads from a file.
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}

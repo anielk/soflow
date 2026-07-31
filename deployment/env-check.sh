@@ -62,8 +62,9 @@ load_env
 REQUIRED_VARS=(JWT_SECRET DATABASE_URL REDIS_URL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD)
 RECOMMENDED_VARS=(MEDIA_STORAGE_DRIVER MEDIA_STORAGE_PATH MEDIA_MAX_FILE_SIZE_MB NEXT_PUBLIC_API_URL)
 
-if [[ ! -f "${PROJECT_ROOT}/.env" ]]; then
-  fail "No .env found at ${PROJECT_ROOT}/.env — run deployment/install.sh or copy .env.production.example."
+ENV_FILE="$(env_file_for)"
+if [[ ! -f "${ENV_FILE}" ]]; then
+  fail "No $(basename "${ENV_FILE}") found at ${ENV_FILE} — run deployment/install.sh or copy $(basename "${ENV_FILE}").example."
 else
   for var in "${REQUIRED_VARS[@]}"; do
     if [[ -n "${!var:-}" ]]; then

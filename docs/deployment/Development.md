@@ -7,10 +7,13 @@ host.
 ## Start
 
 ```bash
-docker compose -f compose.yml -f compose.dev.yml up -d
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml up -d
 ```
 
 First run (or after changing a Dockerfile / `package.json`), add `--build`.
+If `.env.development` doesn't exist yet, copy it from
+`.env.development.example` first (or run `deployment/install.sh --env
+development`, which does this for you).
 
 ## What's running
 
@@ -30,19 +33,22 @@ working copy — edit a file locally and both dev servers reload automatically.
 
 ```bash
 # Logs
-docker compose -f compose.yml -f compose.dev.yml logs -f backend
-docker compose -f compose.yml -f compose.dev.yml logs -f frontend
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml logs -f backend
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml logs -f frontend
 
 # Run a one-off command inside a container
-docker compose -f compose.yml -f compose.dev.yml exec backend npm run prisma:migrate:dev
-docker compose -f compose.yml -f compose.dev.yml exec backend npm run prisma:seed
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml exec backend npm run prisma:migrate:dev
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml exec backend npm run prisma:seed
 
 # Stop everything (keeps volumes: Postgres/Redis data, media)
-docker compose -f compose.yml -f compose.dev.yml down
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml down
 
 # Stop and wipe all data (fresh database)
-docker compose -f compose.yml -f compose.dev.yml down -v
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml down -v
 ```
+
+(Or use `deployment/*.sh --env development`, which pass `--env-file`
+automatically — see [Environment variables](#environment-variables) below.)
 
 Mailhog catches all outgoing SMTP mail sent by the backend in development —
 open `http://localhost:8025` to see it instead of it hitting a real inbox.
@@ -57,15 +63,15 @@ pre-existing characteristic of NestJS's watch-mode process handling
 process doesn't close its listeners cleanly on the restart signal), not
 something introduced by this compose/Dockerfile restructure — the merged
 container configuration is unchanged from before, only split across two
-files (verify with `docker compose -f compose.yml -f compose.dev.yml
-config`).
+files (verify with `docker compose --env-file .env.development -f
+compose.yml -f compose.dev.yml config`).
 
 When it happens, the previous process keeps serving (the container stays
 healthy), but your latest change won't be live until you restart the
 container:
 
 ```bash
-docker compose -f compose.yml -f compose.dev.yml restart backend
+docker compose --env-file .env.development -f compose.yml -f compose.dev.yml restart backend
 ```
 
 If this becomes annoying enough to fix properly, adding
@@ -75,9 +81,14 @@ architecture.
 
 ## Environment variables
 
-Interpolation in the compose files (`${POSTGRES_DB}`, `${FRONTEND_PORT}`,
-...) reads the project-root `.env`. Additional container env (JWT secrets,
-etc.) is injected via `.env.production` regardless of environment — this is
-an existing project convention, unrelated to this restructure. See
+Development reads exactly one env file: `.env.development` (copy it from
+`.env.development.example` if it doesn't exist yet, or let
+`deployment/install.sh --env development` create it). It's used both for
+Compose's own `${VAR}` interpolation (`${POSTGRES_DB}`, `${FRONTEND_PORT}`,
+...) and for the frontend/backend containers' actual runtime env, via
+`env_file:` in `compose.dev.yml` — always passed explicitly with
+`--env-file`, never left to Compose's own implicit `.env`-in-cwd lookup
+(there's no plain `.env` at the repo root to find). See
 [../Deployment.md](../Deployment.md#environment-variables) for the full
-variable reference.
+variable reference and [Architecture.md](Architecture.md) for how this
+compares to demo/production's `.env.production`.

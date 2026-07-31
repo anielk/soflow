@@ -1,5 +1,4 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { randomUUID, randomBytes } from 'crypto';
 import * as fs from 'fs/promises';
 import * as bcrypt from 'bcryptjs';
@@ -12,6 +11,7 @@ import { NotificationService } from '../notification/notification.service';
 import { inviteUserTemplate } from '../notification/templates/invite-user.template';
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
+import { ServiceConfigService } from '../config/service-config.service';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
@@ -45,7 +45,7 @@ export class WorkspaceService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly notificationService: NotificationService,
-    private readonly configService: ConfigService,
+    private readonly serviceConfig: ServiceConfigService,
     private readonly systemEvents: SystemEventsService,
   ) {}
 
@@ -283,7 +283,7 @@ export class WorkspaceService {
         recipientName: recipient.name || recipient.email,
         workspaceName: workspace.name,
         inviterName,
-        loginUrl: `${this.frontendUrl()}/login`,
+        loginUrl: `${this.serviceConfig.frontendUrl()}/login`,
         temporaryEmail: temporaryPassword ? recipient.email : undefined,
         temporaryPassword: temporaryPassword ?? undefined,
       });
@@ -292,10 +292,6 @@ export class WorkspaceService {
       this.logger.warn(`Invite email failed for ${recipient.email}: ${err instanceof Error ? err.message : 'unknown error'}`);
       return false;
     }
-  }
-
-  private frontendUrl(): string {
-    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000').replace(/\/$/, '');
   }
 
   async listMembers(userId: string) {

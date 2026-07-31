@@ -9,18 +9,19 @@ actually run.
 ## Deploy
 
 ```bash
-docker compose -f compose.yml -f compose.demo.yml up -d --build
+docker compose --env-file .env.production -f compose.yml -f compose.demo.yml up -d --build
 ```
 
 `--build` matters here — unlike development, there's no bind mount to pick
-up source changes; a new deploy means a new image build.
+up source changes; a new deploy means a new image build. `--env-file
+.env.production` matters too — without it, Compose won't find any values to
+interpolate (see [Environment](#environment) below) and refuses to build.
 
 Prefer `deployment/install.sh --env demo` (first install) /
 `deployment/deploy.sh --env demo` (subsequent releases) over calling
-`docker compose` directly on a real host — they also handle Prisma
+`docker compose` directly on a real host — besides handling Prisma
 migrations, seeding, health verification, and (for `deploy.sh`) a real HTTP
-smoke test, checked from inside the frontend/backend containers rather than
-through any particular reverse proxy topology. See
+smoke test, they also always pass `--env-file` correctly for you. See
 [../Deployment.md](../Deployment.md).
 
 ## What's running
@@ -43,19 +44,29 @@ non-root (`1000:1000`) — same as production.
 
 ## Environment
 
-Demo reads the same two files as every environment — root `.env` (compose
-variable interpolation) and `.env.production` (container runtime env,
-injected via `env_file:`) — except on the demo host these contain demo's own
-values (its own `DATABASE_URL`, `NEXT_PUBLIC_API_URL`, SMTP target, etc.),
-not development's or production's. Nothing in the compose files themselves
-is demo-specific.
+Demo reads exactly one env file: `.env.production` — used both for Compose's
+own `${VAR}` interpolation and for the frontend/backend containers' actual
+runtime env (via `env_file:` in compose.demo.yml). Production reads a file
+with the same name, on its own host, with its own values (`DATABASE_URL`,
+`NEXT_PUBLIC_API_URL`, SMTP target, etc.) — demo and production never read
+each other's file, and neither ever reads `.env.development`. Nothing in the
+compose files themselves is demo-specific.
+
+`deployment/deploy.sh`/`install.sh` always pass `--env-file .env.production`
+explicitly when invoking Compose for this overlay (see
+`deployment/lib/common.sh`'s `env_file_for`/`dc`) — they never rely on
+Compose's own implicit `.env` lookup. Running `docker compose` directly
+against `compose.demo.yml` without `--env-file .env.production` fails fast
+instead of silently building with blank or wrong-environment values: the
+frontend's `NEXT_PUBLIC_API_URL` build arg carries a `${VAR:?...}`
+required-variable guard specifically for this.
 
 ## Validating demo matches production
 
 ```bash
 diff \
-  <(docker compose -f compose.yml -f compose.demo.yml config) \
-  <(docker compose -f compose.yml -f compose.prod.yml config)
+  <(docker compose --env-file .env.production -f compose.yml -f compose.demo.yml config) \
+  <(docker compose --env-file .env.production -f compose.yml -f compose.prod.yml config)
 ```
 
 An empty diff (aside from any deliberate, documented exception) confirms

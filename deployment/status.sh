@@ -203,3 +203,4 @@ else
 fi
 echo "  Full history: deployment/history.sh --env ${DEPLOY_ENV}"
 echo "  Compose files: $(compose_files)"
+echo "  Env file:      $(env_file_for)"

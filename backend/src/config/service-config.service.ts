@@ -17,4 +17,15 @@ export class ServiceConfigService {
       max: this.configService.get<number>('RATE_LIMIT_MAX', 300),
     };
   }
+
+  /**
+   * Public URL used to build links inside emails (reset links, invite
+   * links, ...). `getOrThrow` is defense in depth, not the primary guard —
+   * env.validation.ts's schema already requires FRONTEND_URL in production
+   * (defaulting only in development/test), so this should only ever throw
+   * if that schema is bypassed.
+   */
+  frontendUrl(): string {
+    return this.configService.getOrThrow<string>('FRONTEND_URL').replace(/\/$/, '');
+  }
 }

@@ -6,15 +6,42 @@
 # Keep this file's service definitions in sync with compose.prod.yml — the
 # two are intentionally near-identical (see docs/deployment/Architecture.md).
 # The only thing that's meant to differ between demo and production is the
-# content of the per-host .env / .env.production files, not this compose
-# logic.
+# content of the per-host .env.production file, not this compose logic —
+# both environments read only .env.production, never .env.development (see
+# deployment/lib/common.sh's env_file_for()).
 services:
   frontend:
     build:
       target: production
+      # Both vars must also be passed as build args — `next build` inlines
+      # NEXT_PUBLIC_API_URL into the client bundle AND freezes
+      # BACKEND_PROXY_URL into .next/routes-manifest.json (verified: a
+      # container started with a different BACKEND_PROXY_URL still proxies
+      # to the build-time value). The `environment:` entries below are
+      # necessary but not sufficient — see docker/frontend.Dockerfile.
+      #
+      # The `:?` guard is defense in depth against exactly the failure mode
+      # that caused a real incident: someone runs `docker compose build`
+      # directly instead of through deployment/deploy.sh, and Compose's own
+      # implicit `.env` auto-lookup (or no file at all) silently supplies a
+      # blank or wrong-environment value. `deployment/lib/common.sh`'s dc()
+      # always passes `--env-file .env.production` explicitly for this
+      # overlay, so the normal path never hits this — but a bypass now fails
+      # loudly instead of building a broken image.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is not set. Run this via deployment/deploy.sh, or pass --env-file .env.production explicitly — do not rely on Docker Compose's own .env auto-lookup for this overlay.}
+        BACKEND_PROXY_URL: http://backend:4000
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      # Kept for any future code that reads this at actual runtime — the
+      # `/v1/:path*` rewrite itself already got its value from the build arg
+      # above and won't see a change here. Must be the backend's Docker
+      # service name, not localhost (frontend and backend are separate
+      # containers on creator-network).
+      BACKEND_PROXY_URL: http://backend:4000
+    env_file:
+      - .env.production
     # Fixed on purpose — not ${FRONTEND_PORT}-driven like development's
     # mapping. The existing Nginx Proxy Manager (infrastructure, outside
     # this repo) already forwards to host port 80 and must never need
@@ -35,6 +62,8 @@ services:
   backend:
     build:
       target: production
+    env_file:
+      - .env.production
     environment:
       NODE_ENV: production
     expose:

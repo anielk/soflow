@@ -3,9 +3,11 @@
 Production runs the identical build/runtime configuration as demo — same
 image targets, same read-only/non-root hardening. Nothing in
 `compose.prod.yml` differs from `compose.demo.yml`; only the production
-host's own `.env` / `.env.production` content (real `DATABASE_URL`, real
+host's own `.env.production` content (real `DATABASE_URL`, real
 `NEXT_PUBLIC_API_URL`, real SMTP credentials, real `JWT_SECRET`/
-`SESSION_SECRET`, ...) does.
+`SESSION_SECRET`, ...) does — demo's `.env.production` and production's are
+two separate files that happen to share a name, one per host, never read by
+the other. Production never reads `.env.development`.
 
 Leinaflow doesn't deploy or configure a reverse proxy itself — see
 [Architecture.md](Architecture.md#where-infrastructure-ends-and-leinaflow-begins).
@@ -39,8 +41,12 @@ works if you need it, but `deploy.sh` is the one to reach for on demo/production
 The equivalent raw compose command (what those scripts run under the hood):
 
 ```bash
-docker compose -f compose.yml -f compose.prod.yml up -d --build
+docker compose --env-file .env.production -f compose.yml -f compose.prod.yml up -d --build
 ```
+
+`--env-file .env.production` isn't optional here — Compose no longer has an
+implicit `.env` to fall back to, and `NEXT_PUBLIC_API_URL` carries a
+`${VAR:?...}` guard that refuses to build without it.
 
 Full flag/script reference: [../Deployment.md](../Deployment.md).
 

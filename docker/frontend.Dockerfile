@@ -19,6 +19,19 @@ CMD ["npm", "run", "dev"]
 
 # builder — compiles the production build using the full (dev+prod) deps.
 FROM deps AS builder
+# Both vars must be build ARGs, not just compose `environment:` entries:
+# - NEXT_PUBLIC_API_URL is inlined into the client bundle by `next build`.
+# - BACKEND_PROXY_URL looks like a runtime-only var (it's read in
+#   next.config.mjs's rewrites(), which runs server-side, never shipped to
+#   the browser) but `next build` itself calls rewrites() once to compute
+#   `.next/routes-manifest.json`, and that destination is frozen into the
+#   manifest — confirmed empirically: a container started with a different
+#   BACKEND_PROXY_URL still proxied to the build-time host. A runtime
+#   `environment:` entry alone has no effect on either variable.
+ARG NEXT_PUBLIC_API_URL
+ARG BACKEND_PROXY_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV BACKEND_PROXY_URL=$BACKEND_PROXY_URL
 COPY frontend/ ./
 ENV NODE_ENV=production
 RUN npm run build

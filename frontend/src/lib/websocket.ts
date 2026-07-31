@@ -1,11 +1,14 @@
 import { io, Socket } from 'socket.io-client';
+import { getApiBaseUrl } from './api';
 
 export class WebSocketClient {
   private socket: Socket | null = null;
   private readonly baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    // Same base URL (and same dev-fallback / production-fail-fast rules) as
+    // every REST call — see getApiBaseUrl in ./api.
+    this.baseUrl = getApiBaseUrl();
   }
 
   connect() {

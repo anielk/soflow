@@ -1,7 +1,28 @@
-const FALLBACK_API_URL = 'http://localhost:4000/v1';
-
+/**
+ * NEXT_PUBLIC_API_URL is inlined into the client bundle at `next build` time
+ * (see docker/frontend.Dockerfile's build ARG) — so if it's missing here in
+ * a production bundle, it was never wired into the build, not merely unset
+ * at container runtime. Falling back to a `localhost` URL in that case would
+ * silently ship a broken bundle (see the demo login incident this guards
+ * against); failing loudly is more useful than a request that can never
+ * reach the backend.
+ */
 export function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? FALLBACK_API_URL;
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured) return configured;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'NEXT_PUBLIC_API_URL is not set. It must be passed as a Docker build arg ' +
+        '(see compose.demo.yml / compose.prod.yml `build.args`) — a container ' +
+        '`environment:` entry alone has no effect on the already-compiled client bundle.',
+    );
+  }
+
+  // Development/test fallback: a relative path, proxied to the backend by
+  // next.config.mjs's `/v1/:path*` rewrite (BACKEND_PROXY_URL) — so this file
+  // doesn't need its own copy of the backend's host/port.
+  return '/v1';
 }
 
 /** Single place that turns a route path into a full backend URL — every `lib/*.ts` API module shares this instead of re-declaring it. */

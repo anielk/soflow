@@ -98,6 +98,7 @@ print_summary() {
   echo "  Backend API:   ${backend_url}"
   echo "  Backups dir:   ${BACKUP_DIR}"
   echo "  Compose files: $(compose_files)"
+  echo "  Env file:      $(env_file_for)"
   echo "  Server id:     ${DEPLOYMENT_DIR}/server.json"
   echo
   dc ps

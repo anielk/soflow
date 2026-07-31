@@ -20,10 +20,19 @@ export LIB_DIR DEPLOYMENT_DIR PROJECT_ROOT
 
 # RESOURCE_PREFIX — the prefix every Docker resource name (containers,
 # network, volumes) uses; must match compose.yml's `${PROJECT_NAME:-creator}`
-# exactly. Read directly from root .env here (rather than via load_env,
-# which runs later in most scripts) so it's available to every script from
-# the start, including create_folders/check_ports which run before load_env.
-PROJECT_NAME="$(grep -m1 '^PROJECT_NAME=' "${PROJECT_ROOT}/.env" 2>/dev/null | cut -d= -f2-)"
+# exactly. Read directly from whichever env file exists here (rather than
+# via load_env/env_file_for, both of which need DEPLOY_ENV resolved — that
+# happens later in this file) so it's available to every script from the
+# start, including create_folders/check_ports which run before load_env.
+# PROJECT_NAME is meant to be identical across dev/demo/production on a
+# given host (see docs/deployment/Architecture.md#multi-product-naming), so
+# reading it from either file — whichever happens to exist yet — is safe.
+for _env_candidate in .env.development .env.production; do
+  [[ -f "${PROJECT_ROOT}/${_env_candidate}" ]] || continue
+  PROJECT_NAME="$(grep -m1 '^PROJECT_NAME=' "${PROJECT_ROOT}/${_env_candidate}" 2>/dev/null | cut -d= -f2-)"
+  [[ -n "${PROJECT_NAME}" ]] && break
+done
+unset _env_candidate
 RESOURCE_PREFIX="${PROJECT_NAME:-creator}"
 export PROJECT_NAME RESOURCE_PREFIX
 
@@ -270,7 +279,7 @@ fetch_backend_health_report() {
   (
     trap - ERR
     cd "${PROJECT_ROOT}" || exit 1
-    timeout "${to}" ${COMPOSE} $(compose_files) exec -T backend node -e "
+    timeout "${to}" ${COMPOSE} --env-file "$(env_file_for)" $(compose_files) exec -T backend node -e "
       const req = require('http').get('http://localhost:4000/v1/health', (res) => {
         let data = '';
         res.on('data', (c) => { data += c; });
@@ -344,15 +353,16 @@ parse_common_flags() {
 # ── Deployment environment ───────────────────────────────────────────────
 #
 # development -> compose.yml + compose.dev.yml (hot-reload, bind mounts,
-#   published dev ports)
+#   published dev ports) + .env.development
 # demo        -> compose.yml + compose.demo.yml (production build; frontend
 #   publishes a fixed host port 80 — see check_ports below — so the
 #   existing external Nginx Proxy Manager never needs reconfiguring;
-#   backend stays `expose`-only, never published)
+#   backend stays `expose`-only, never published) + .env.production
 # production  -> compose.yml + compose.prod.yml (identical build/runtime
 #   config to demo — see docs/deployment/Architecture.md — only the
-#   per-host .env / .env.production content differs)
-# Nothing here is hardcoded to a specific host/port — those come from .env.
+#   per-host .env.production content differs) + .env.production
+# Nothing here is hardcoded to a specific host/port — those come from the
+# resolved env file (see env_file_for below).
 #
 # Default resolution, in order: an explicit `--env` flag (handled by
 # parse_common_flags, which runs later and overrides whatever's set here);
@@ -383,24 +393,45 @@ validate_deploy_env() {
   esac
 }
 
-# Compose interpolation (${POSTGRES_DB} etc. in the yaml) reads root .env;
-# the backend/frontend containers' actual runtime env comes from .env.production
-# via `env_file:` in compose.yml (see compose.yml's backend
-# service — this is an existing project convention, not something these
-# scripts introduce). Source both so validation reflects what the
-# containers really get, .env.production taking precedence since that's
-# what's actually injected into them.
+# env_file_for — the one file for the resolved DEPLOY_ENV, both for Docker
+# Compose's own ${VAR} interpolation (passed explicitly via --env-file in
+# dc(), never left to Compose's implicit "look for a file literally named
+# .env in cwd" default) and for this shell's own reads (load_env below).
+#
+# This is deliberately a function, not a value computed once at source time:
+# DEPLOY_ENV can still change after common.sh is sourced (parse_common_flags,
+# called later by each script, applies an explicit --env flag) — env_file_for
+# must re-read DEPLOY_ENV fresh on every call, which is why dc() calls it
+# inline on every invocation instead of caching the result in a variable.
+#
+# Explicit --env-file existing to fix a real incident: a bare `docker
+# compose build` against compose.demo.yml/compose.prod.yml, run outside
+# these scripts, used to pick up Compose's own implicit .env lookup (or
+# whatever a previous load_env call had exported into the calling shell) —
+# demo/production values were never guaranteed to win. Passing --env-file
+# here means every dc() call is correct regardless of shell state, and a
+# manual `docker compose` invocation that omits it now fails via the
+# ${VAR:?...} guards in compose.demo.yml/compose.prod.yml instead of
+# silently building with the wrong values.
+env_file_for() {
+  case "${DEPLOY_ENV}" in
+    development) echo "${PROJECT_ROOT}/.env.development" ;;
+    demo|production) echo "${PROJECT_ROOT}/.env.production" ;;
+  esac
+}
+
+# load_env — sources this environment's one file (see env_file_for) into the
+# calling shell, for scripts that need to read a variable's value directly
+# in bash (env-check.sh's ${!var:-} checks, should_seed(), etc.). This is
+# no longer what makes Docker Compose's own interpolation correct — dc()
+# passes --env-file explicitly for that — so load_env existing or not has
+# no bearing on what a build/up actually compiles with.
 load_env() {
-  if [[ -f "${PROJECT_ROOT}/.env" ]]; then
+  local file; file="$(env_file_for)"
+  if [[ -f "${file}" ]]; then
     set -o allexport
     # shellcheck disable=SC1091
-    source "${PROJECT_ROOT}/.env"
-    set +o allexport
-  fi
-  if [[ -f "${PROJECT_ROOT}/.env.production" ]]; then
-    set -o allexport
-    # shellcheck disable=SC1091
-    source "${PROJECT_ROOT}/.env.production"
+    source "${file}"
     set +o allexport
   fi
 }
@@ -429,7 +460,9 @@ detect_compose_cmd() {
 }
 
 # dc <compose-subcommand-and-args...> — runs compose from the project root
-# with the -f flags for the resolved DEPLOY_ENV already applied.
+# with the -f flags for the resolved DEPLOY_ENV already applied, and
+# --env-file pointed explicitly at that environment's one file (see
+# env_file_for) — never Compose's own implicit .env-in-cwd lookup.
 dc() {
   # `trap - ERR` inside the subshell: callers (deploy.sh/rollback.sh) set
   # `-E` so their own ERR trap reaches into functions like this one — but
@@ -446,7 +479,7 @@ dc() {
   # Intentional word-splitting: COMPOSE ("docker compose") and compose_files
   # (multiple "-f <file>" pairs) are both meant to expand into several words.
   # shellcheck disable=SC2086,SC2046
-  (trap - ERR; cd "${PROJECT_ROOT}" && ${COMPOSE} $(compose_files) "$@")
+  (trap - ERR; cd "${PROJECT_ROOT}" && ${COMPOSE} --env-file "$(env_file_for)" $(compose_files) "$@")
 }
 
 # service_running <name> — true if the given compose service has a running container.
@@ -799,36 +832,40 @@ fill_blank_secret() {
   fi
 }
 
-# ensure_env_files <target_dir> — creates <target_dir>/.env and
-# <target_dir>/.env.production from .env.production.example if missing,
-# generating JWT_SECRET/SESSION_SECRET when left blank. Both .env (compose
-# variable interpolation) and .env.production (what the backend/frontend
-# containers actually load via `env_file:` in compose.yml) are
-# created from the same template — see docs/Deployment.md's environment
-# variables section for why there are two.
+# ensure_env_files <target_dir> — creates the ONE env file the resolved
+# DEPLOY_ENV actually uses (see env_file_for: .env.development for
+# development, .env.production for demo/production) from its matching
+# template, generating JWT_SECRET/SESSION_SECRET when left blank. Never
+# touches an already-existing file. Deliberately environment-aware — a
+# previous version of this function created both .env and .env.production
+# from the same template regardless of DEPLOY_ENV, which is exactly the
+# kind of drift that let a stale dev-shaped .env silently feed a demo/
+# production build (see docs/deployment/Architecture.md).
 ensure_env_files() {
   local target_dir="${1:-${PROJECT_ROOT}}"
-  local template="${target_dir}/.env.production.example"
-  [[ -f "${template}" ]] || { log_err "Template not found: ${template}"; return 1; }
+  local file template
+  case "${DEPLOY_ENV}" in
+    development) file=".env.development"; template=".env.development.example" ;;
+    demo|production) file=".env.production"; template=".env.production.example" ;;
+    *) log_err "ensure_env_files: unknown DEPLOY_ENV '${DEPLOY_ENV}'"; return 1 ;;
+  esac
 
-  local created_any=0
-  for target in .env .env.production; do
-    local path="${target_dir}/${target}"
-    if [[ -f "${path}" ]]; then
-      log_ok "${target} already exists — leaving it untouched."
-    else
-      cp "${template}" "${path}"
-      fill_blank_secret "${path}" JWT_SECRET
-      fill_blank_secret "${path}" SESSION_SECRET
-      log_warn "${target} created from template at ${path} — review POSTGRES_PASSWORD before using this in production."
-      created_any=1
-    fi
-  done
+  local template_path="${target_dir}/${template}"
+  [[ -f "${template_path}" ]] || { log_err "Template not found: ${template_path}"; return 1; }
 
-  if [[ "${created_any}" -eq 1 ]]; then
-    confirm "Continue with the generated environment files as-is?" || {
-      log_info "Edit .env / .env.production in ${target_dir} then re-run."
-      return 1
-    }
+  local path="${target_dir}/${file}"
+  if [[ -f "${path}" ]]; then
+    log_ok "${file} already exists — leaving it untouched."
+    return 0
   fi
+
+  cp "${template_path}" "${path}"
+  fill_blank_secret "${path}" JWT_SECRET
+  fill_blank_secret "${path}" SESSION_SECRET
+  log_warn "${file} created from template at ${path} — review POSTGRES_PASSWORD before using this in production."
+
+  confirm "Continue with the generated environment file as-is?" || {
+    log_info "Edit ${file} in ${target_dir} then re-run."
+    return 1
+  }
 }

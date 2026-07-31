@@ -54,7 +54,7 @@ STEPS=(
   "03-install-docker.sh:Install and enable Docker + Docker Compose"
   "04-install-git.sh:Verify git and prepare it for the clone step"
   "05-clone-project.sh:Clone the project, or git pull if already cloned"
-  "06-create-env.sh:Generate secrets, create missing .env files, validate"
+  "06-create-env.sh:Generate secrets, create the missing env file, validate"
   "07-install-leinaflow.sh:Run deployment/install.sh (build, migrate, seed, start)"
   "08-healthcheck.sh:Confirm the running stack is healthy"
   "09-summary.sh:Print the final summary"
@@ -69,6 +69,7 @@ if [[ "${DRY_RUN}" -eq 1 ]]; then
     demo)        echo "Compose files:    -f ${INSTALL_DIR}/compose.yml -f ${INSTALL_DIR}/compose.demo.yml" ;;
     production)  echo "Compose files:    -f ${INSTALL_DIR}/compose.yml -f ${INSTALL_DIR}/compose.prod.yml" ;;
   esac
+  echo "Env file:         $(env_file_for)"
   echo
   echo "Steps that would run, in order:"
   for step in "${STEPS[@]}"; do

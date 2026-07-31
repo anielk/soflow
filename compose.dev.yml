@@ -8,6 +8,8 @@ services:
   frontend:
     build:
       target: development
+    env_file:
+      - .env.development
     environment:
       NODE_ENV: development
       # Relative URL so browser requests go through Next.js rewrites to the
@@ -26,6 +28,8 @@ services:
   backend:
     build:
       target: development
+    env_file:
+      - .env.development
     environment:
       NODE_ENV: development
     ports:
@@ -33,7 +37,6 @@ services:
     volumes:
       - ./backend/src:/app/src
       - ./backend/prisma:/app/prisma
-      - ./backend/.env.production:/app/.env.production
       - ./backend/package.json:/app/package.json
     depends_on:
       mailhog:

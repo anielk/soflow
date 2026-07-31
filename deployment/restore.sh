@@ -81,7 +81,7 @@ MEDIA_ARCHIVE="${BACKUP_CHOICE}/media.tar.gz"
 
 if [[ "${DRY_RUN}" -eq 1 ]]; then
   log_step "Dry run — no changes will be made"
-  echo "Would stop services:  ${COMPOSE} $(compose_files) stop backend frontend"
+  echo "Would stop services:  ${COMPOSE} --env-file $(env_file_for) $(compose_files) stop backend frontend"
   [[ -f "${DB_DUMP}" ]] && echo "Would restore database from: ${DB_DUMP}" || echo "No db.sql in this backup — database restore would be skipped."
   [[ -f "${MEDIA_ARCHIVE}" ]] && echo "Would restore media from: ${MEDIA_ARCHIVE}" || echo "No media.tar.gz in this backup — media restore would be skipped."
   echo "Would restart services and run healthcheck.sh --env ${DEPLOY_ENV}"

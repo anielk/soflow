@@ -3,7 +3,14 @@
 Leinaflow runs from a single base Compose file plus one environment-specific
 overlay. Three environments — development, demo, production — share the same
 `compose.yml` and the same two Dockerfiles; what changes between them is only
-the overlay file and the per-host `.env` / `.env.production` content.
+the overlay file and the per-host env file's content: `.env.development` for
+development, `.env.production` for demo/production (demo and production each
+have their own copy of that filename — see
+[Verifying demo/production parity](#verifying-demoproduction-parity)).
+Compose is always invoked with `--env-file` pointed explicitly at the right
+one (see `deployment/lib/common.sh`'s `env_file_for`/`dc`) — never left to
+Compose's own implicit "look for a file literally named `.env`" default,
+which can't tell one environment's config from another's.
 
 ```
 compose.yml            <- services, networks, volumes, healthchecks,
@@ -88,13 +95,22 @@ representative of production.
 
 Because the two overlay files are meant to stay identical, any change to one
 must be mirrored in the other. To confirm they currently produce the same
-merged configuration:
+merged configuration (both read `.env.production` — demo and production each
+have their own host-local copy of that filename, so this only proves the
+compose *logic* matches, not that the two hosts' values are identical):
 
 ```bash
 diff \
-  <(docker compose -f compose.yml -f compose.demo.yml config) \
-  <(docker compose -f compose.yml -f compose.prod.yml config)
+  <(docker compose --env-file .env.production -f compose.yml -f compose.demo.yml config) \
+  <(docker compose --env-file .env.production -f compose.yml -f compose.prod.yml config)
 ```
+
+`--env-file` is required here: without it, Compose's own implicit `.env`
+lookup finds nothing (there's no longer a plain `.env` at the repo root —
+see above) and every `${VAR}` in the output resolves blank, including the
+`NEXT_PUBLIC_API_URL`/`BACKEND_PROXY_URL` build args that carry a `:?`
+required-variable guard — the command fails outright rather than silently
+comparing two blank configs.
 
 An empty diff means demo and production are running identical software —
 the property this architecture exists to guarantee.
@@ -161,8 +177,8 @@ service name (`http://backend:4000`, `postgres:5432`, ...).
 
 - **Development**: frontend/backend/postgres/redis ports are published to
   the host (`FRONTEND_PORT`/`BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` from
-  `.env`) for local tooling (psql, Redis CLI, browser). `mailhog` also
-  publishes its web UI on `8025`.
+  `.env.development`) for local tooling (psql, Redis CLI, browser). `mailhog`
+  also publishes its web UI on `8025`.
 - **Demo/production**: frontend publishes a single, fixed host port — `80`
   (`80:3000`, hardcoded in compose.demo.yml/compose.prod.yml, not
   `${FRONTEND_PORT}`-driven like development). Backend only `expose`s its
@@ -253,17 +269,19 @@ the same Docker host would then collide — same container names, same
 network name, same volume names — which risks one product's containers
 silently attaching to (or overwriting) another's.
 
-The fix is `PROJECT_NAME` (set in `.env`, already present but previously
-unused): every resource name in `compose.yml`/`compose.dev.yml`/
-`compose.demo.yml`/`compose.prod.yml` reads `${PROJECT_NAME:-creator}`
-instead of a literal `creator-...` string, and `deployment/lib/common.sh`
-exposes the same value as `RESOURCE_PREFIX` for the shell scripts
-(`backup.sh`, `restore.sh`, `uninstall.sh`, `install.sh`,
-`bootstrap/09-summary.sh`, and `check_ports`'s "already installed" check).
-Leinaflow's own `.env` keeps `PROJECT_NAME=creator` specifically so this
-change doesn't rename anything on hosts that already have Leinaflow
-running — it's a pure templating hook. A new product adopting this
-standard sets its own value (e.g. `PROJECT_NAME=ticketengine`) and gets
+The fix is `PROJECT_NAME` (set in `.env.development`/`.env.production`,
+already present but previously unused): every resource name in
+`compose.yml`/`compose.dev.yml`/`compose.demo.yml`/`compose.prod.yml` reads
+`${PROJECT_NAME:-creator}` instead of a literal `creator-...` string, and
+`deployment/lib/common.sh` exposes the same value as `RESOURCE_PREFIX` for
+the shell scripts (`backup.sh`, `restore.sh`, `uninstall.sh`, `install.sh`,
+`bootstrap/09-summary.sh`, and `check_ports`'s "already installed" check) —
+read directly from whichever of the two files exists, since `PROJECT_NAME`
+is meant to be identical across a host's environments (see the early-read
+comment in `common.sh`). Leinaflow's own env files keep `PROJECT_NAME=creator`
+specifically so this change doesn't rename anything on hosts that already
+have Leinaflow running — it's a pure templating hook. A new product adopting
+this standard sets its own value (e.g. `PROJECT_NAME=ticketengine`) and gets
 fully isolated container/network/volume names for free, with zero changes
 to the compose files or scripts themselves.
 
@@ -271,7 +289,7 @@ Note this only covers **naming**, not port collisions: `FRONTEND_PORT`/
 `BACKEND_PORT`/`POSTGRES_PORT`/`REDIS_PORT` still default to
 `3000`/`4000`/`5432`/`6379` in development, so two products sharing one
 development host still need distinct values set in each product's own
-`.env`. Demo/production carry the *same* concern now for a different
+`.env.development`. Demo/production carry the *same* concern now for a different
 reason: frontend's host port there is fixed at `80` (see
 [Networking](#networking)) precisely so the existing Nginx Proxy Manager
 never needs reconfiguring — which means two products both using this exact

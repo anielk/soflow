@@ -1,5 +1,4 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +10,7 @@ import { welcomeTemplate } from '../notification/templates/welcome.template';
 import { passwordResetTemplate } from '../notification/templates/password-reset.template';
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
+import { ServiceConfigService } from '../config/service-config.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 
@@ -30,7 +30,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly notificationService: NotificationService,
-    private readonly configService: ConfigService,
+    private readonly serviceConfig: ServiceConfigService,
     private readonly systemEvents: SystemEventsService,
   ) {}
 
@@ -167,7 +167,7 @@ export class AuthService {
     this.notificationService
       .sendTemplate(user.email, welcomeTemplate, {
         name: user.name || user.username,
-        loginUrl: `${this.frontendUrl()}/login`,
+        loginUrl: `${this.serviceConfig.frontendUrl()}/login`,
       })
       .catch((err) => this.logger.warn(`Welcome email failed for ${user.email}: ${errorMessage(err)}`));
 
@@ -209,7 +209,7 @@ export class AuthService {
     try {
       await this.notificationService.sendTemplate(user.email, passwordResetTemplate, {
         name: user.name || user.username,
-        resetUrl: `${this.frontendUrl()}/reset-password?token=${rawToken}`,
+        resetUrl: `${this.serviceConfig.frontendUrl()}/reset-password?token=${rawToken}`,
         expiresInMinutes: RESET_TOKEN_TTL_MINUTES,
       });
     } catch (err) {
@@ -235,10 +235,6 @@ export class AuthService {
       targetId: user.id,
       message: `${actorName} reset their password`,
     });
-  }
-
-  private frontendUrl(): string {
-    return this.configService.get<string>('FRONTEND_URL', 'http://localhost:3000').replace(/\/$/, '');
   }
 }
 

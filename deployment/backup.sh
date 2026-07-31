@@ -53,9 +53,8 @@ fi
 # ── Environment ──────────────────────────────────────────────────────────
 log_info "Copying environment files..."
 mkdir -p "${TARGET_DIR}/env"
-for f in .env .env.production; do
-  [[ -f "${PROJECT_ROOT}/${f}" ]] && cp "${PROJECT_ROOT}/${f}" "${TARGET_DIR}/env/${f}"
-done
+ENV_FILE="$(env_file_for)"
+[[ -f "${ENV_FILE}" ]] && cp "${ENV_FILE}" "${TARGET_DIR}/env/$(basename "${ENV_FILE}")"
 log_ok "Environment files copied."
 
 # ── Configuration ────────────────────────────────────────────────────────

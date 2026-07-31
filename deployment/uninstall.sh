@@ -40,7 +40,7 @@ detect_compose_cmd
 log_step "Leinaflow uninstall (env: ${DEPLOY_ENV})"
 
 if [[ "${DRY_RUN}" -eq 1 ]]; then
-  echo "Would run: ${COMPOSE} $(compose_files) down"
+  echo "Would run: ${COMPOSE} --env-file $(env_file_for) $(compose_files) down"
   if [[ "${REMOVE_VOLUMES}" -eq 1 ]]; then
     echo "Would also remove volumes: ${RESOURCE_PREFIX}-postgres-data, ${RESOURCE_PREFIX}-redis-data, ${RESOURCE_PREFIX}-media-storage"
   else
