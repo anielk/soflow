@@ -2,6 +2,7 @@ import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { LoginThrottleGuard } from './login-throttle.guard';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
@@ -12,7 +13,10 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @UseGuards(LocalAuthGuard)
+  // LoginThrottleGuard runs first, before LocalAuthGuard does any bcrypt
+  // work — see login-throttle.guard.ts for the requests/window and bucket
+  // key this dedicated brute-force limit uses.
+  @UseGuards(LoginThrottleGuard, LocalAuthGuard)
   @Post('login')
   async login(@Body() loginDto: LoginDto, @Req() req: any) {
     return this.authService.login(req.user, req.ip, req.headers?.['user-agent']);
@@ -26,8 +30,8 @@ export class AuthController {
   }
 
   @Post('register')
-  async register(@Body() registerDto: RegisterDto): Promise<RegisterResponseDto> {
-    return this.authService.register(registerDto);
+  async register(@Body() registerDto: RegisterDto, @Req() req: any): Promise<RegisterResponseDto> {
+    return this.authService.register(registerDto, req.ip, req.headers?.['user-agent']);
   }
 
   @Post('forgot-password')

@@ -12,12 +12,15 @@ import { inviteUserTemplate } from '../notification/templates/invite-user.templa
 import { SystemEventsService } from '../events/system-events.service';
 import { EVENT_TYPES } from '../events/event-types';
 import { ServiceConfigService } from '../config/service-config.service';
+import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { UpdateWorkspaceDto } from './dto/update-workspace.dto';
+import { UpdateWorkspaceStatusDto } from './dto/update-workspace-status.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
 import { UpdateCreatorDto } from './dto/update-creator.dto';
 import { CreatorResponseDto, CreatorStatsDto, toCreatorResponse } from './dto/creator-response.dto';
 import { validateLogoFile } from './validators/logo-validation';
+import { uniqueWorkspaceSlug } from './workspace-slug.util';
 
 const MANAGE_ROLES: Role[] = [Role.OWNER, Role.MANAGER, Role.SUPER_ADMIN];
 const LOGO_MAX_DIMENSION = 512;
@@ -33,6 +36,18 @@ export interface WorkspaceResponse {
   dateFormat: string;
   numberFormat: string;
   currency: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** Platform-wide view for the SUPER_ADMIN workspace management page — never exposed to a plain member. */
+export interface AdminWorkspaceListItem {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  isActive: boolean;
+  memberCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,6 +112,48 @@ export class WorkspaceService {
   async getWorkspace(userId: string): Promise<WorkspaceResponse> {
     const workspaceId = await this.resolveWorkspaceId(userId);
     const workspace = await this.prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } });
+    return this.toResponse(workspace);
+  }
+
+  /**
+   * Creates an additional workspace with the caller as its OWNER. Available
+   * to any authenticated user, not just SUPER_ADMIN — same self-service
+   * capability registration already grants everyone once, just exposed as
+   * its own action (see the codebase's own admin/workspaces placeholder
+   * copy: "a user can be a member of multiple workspaces... nothing
+   * assumes a single workspace exists").
+   *
+   * Workspace + OWNER membership are created in one transaction for the
+   * same reason AuthService.register does it: a failure partway through
+   * must never leave an ownerless workspace or a membership pointing at a
+   * workspace that doesn't exist.
+   *
+   * Deliberately does NOT change which workspace resolveMembership treats
+   * as "current" for this user (still their oldest membership) — there is
+   * no workspace-switcher yet. This is a real, working primitive; making
+   * it the user's active dashboard workspace is a separate feature.
+   */
+  async create(userId: string, dto: CreateWorkspaceDto): Promise<WorkspaceResponse> {
+    const workspace = await this.prisma.$transaction(async (tx) => {
+      const slug = await uniqueWorkspaceSlug(tx, dto.name);
+      const txWorkspace = await tx.workspace.create({ data: { name: dto.name.trim(), slug } });
+      await tx.workspaceMember.create({
+        data: { workspaceId: txWorkspace.id, userId, role: Role.OWNER },
+      });
+      return txWorkspace;
+    });
+
+    const actorName = await this.getActorDisplayName(userId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.WORKSPACE_CREATED,
+      userId,
+      workspaceId: workspace.id,
+      actorName,
+      targetType: 'Workspace',
+      targetId: workspace.id,
+      message: `${actorName} created workspace "${workspace.name}"`,
+    });
+
     return this.toResponse(workspace);
   }
 
@@ -412,6 +469,65 @@ export class WorkspaceService {
     const creator = await this.prisma.creator.findFirst({ where: { id: creatorId, workspaceId } });
     if (!creator) throw new NotFoundException('Creator not found');
     return creator;
+  }
+
+  /**
+   * Platform-wide — callers reach this only via a SUPER_ADMIN-gated route
+   * (see WorkspaceController), so it deliberately does not go through
+   * resolveMembership/resolveWorkspaceId at all: a platform admin manages
+   * workspaces directly by ID, not through "their" workspace.
+   */
+  async listAllForAdmin(): Promise<AdminWorkspaceListItem[]> {
+    const workspaces = await this.prisma.workspace.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { members: true } } },
+    });
+    return workspaces.map((w) => this.toAdminListItem(w));
+  }
+
+  /**
+   * Activate/deactivate a workspace platform-wide. `isActive` already
+   * existed on the schema with no write path anywhere — this is the first
+   * one. Not wired into any request-blocking check yet (no endpoint reads
+   * it to reject a deactivated workspace's members) — that enforcement is
+   * a separate follow-up, this is the admin control surface for it.
+   */
+  async setActiveStatus(callerId: string, workspaceId: string, dto: UpdateWorkspaceStatusDto): Promise<AdminWorkspaceListItem> {
+    const existing = await this.prisma.workspace.findUnique({ where: { id: workspaceId } });
+    if (!existing) throw new NotFoundException('Workspace not found');
+
+    const updated = await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { isActive: dto.isActive },
+      include: { _count: { select: { members: true } } },
+    });
+
+    const actorName = await this.getActorDisplayName(callerId);
+    this.systemEvents.publish({
+      type: EVENT_TYPES.WORKSPACE_UPDATED,
+      userId: callerId,
+      workspaceId,
+      actorName,
+      targetType: 'Workspace',
+      targetId: workspaceId,
+      message: `${actorName} ${dto.isActive ? 'activated' : 'deactivated'} workspace "${updated.name}"`,
+      metadata: { fields: ['isActive'] },
+    });
+
+    return this.toAdminListItem(updated);
+  }
+
+  private toAdminListItem(workspace: Workspace & { _count: { members: number } }): AdminWorkspaceListItem {
+    return {
+      id: workspace.id,
+      name: workspace.name,
+      slug: workspace.slug,
+      plan: workspace.plan,
+      isActive: workspace.isActive,
+      memberCount: workspace._count.members,
+      createdAt: workspace.createdAt,
+      updatedAt: workspace.updatedAt,
+    };
   }
 
   private generateUsername(email: string): string {

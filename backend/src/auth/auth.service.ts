@@ -13,6 +13,7 @@ import { EVENT_TYPES } from '../events/event-types';
 import { ServiceConfigService } from '../config/service-config.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
+import { uniqueWorkspaceSlug } from '../workspace/workspace-slug.util';
 
 const RESET_TOKEN_TTL_MINUTES = 15;
 
@@ -106,7 +107,7 @@ export class AuthService {
    * through can never leave a user without a workspace, or a workspace
    * without an owner.
    */
-  async register(dto: RegisterDto): Promise<RegisterResponseDto> {
+  async register(dto: RegisterDto, ipAddress?: string, userAgent?: string): Promise<RegisterResponseDto> {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     let user: User;
@@ -122,7 +123,7 @@ export class AuthService {
           },
         });
 
-        const slug = await this.uniqueWorkspaceSlug(tx, dto.username);
+        const slug = await uniqueWorkspaceSlug(tx, dto.username);
         const txWorkspace = await tx.workspace.create({
           data: { name: dto.username.trim(), slug },
         });
@@ -151,7 +152,13 @@ export class AuthService {
       targetType: 'User',
       targetId: user.id,
       message: `${actorName} created an account`,
+      ipAddress,
+      userAgent,
     });
+    // Workspace creation during registration keeps its existing shape —
+    // ipAddress/userAgent belong to the "someone registered" event above,
+    // same as every other workspace-mutating event in the app (see
+    // WorkspaceService.create/update/uploadLogo) never carrying them either.
     this.systemEvents.publish({
       type: EVENT_TYPES.WORKSPACE_CREATED,
       userId: user.id,
@@ -183,17 +190,6 @@ export class AuthService {
       candidate = `${base}${randomBytes(3).toString('hex')}`;
     }
     throw new ConflictException('Could not generate a unique username — please try a different one.');
-  }
-
-  private async uniqueWorkspaceSlug(tx: Prisma.TransactionClient, seed: string): Promise<string> {
-    const base = seed.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').substring(0, 40) || 'workspace';
-    let candidate = base;
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const existing = await tx.workspace.findUnique({ where: { slug: candidate } });
-      if (!existing) return candidate;
-      candidate = `${base}-${randomBytes(2).toString('hex')}`;
-    }
-    throw new ConflictException('Could not generate a unique workspace name — please try a different one.');
   }
 
   /** Always succeeds from the caller's perspective — never reveals whether the email exists. */

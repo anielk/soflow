@@ -4,16 +4,18 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { Request, Response, NextFunction } from 'express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { TRUST_PROXY_HOPS } from './config/trust-proxy.config';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
-  // This app sits behind a reverse proxy in demo/production (infrastructure,
-  // operator's choice — not something this repo deploys) and the frontend's
-  // dev-mode rewrite locally — trust its X-Forwarded-For so
-  // req.ip (what ThrottlerGuard keys rate limits on) reflects the real
-  // client, not the proxy's own address for every request.
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  // Trust exactly one reverse-proxy hop so req.ip (used by every auth audit
+  // event and by ThrottlerGuard's rate-limit key) reflects the real client,
+  // not a proxy's own address. See trust-proxy.config.ts for why this is
+  // `1` and not `2` despite two processes sitting in front of this backend
+  // in demo/production, and docs/architecture/ip-tracking.md for the full
+  // chain this was verified against.
+  app.getHttpAdapter().getInstance().set('trust proxy', TRUST_PROXY_HOPS);
 
   // Set WebSocket adapter explicitly to avoid "No driver (WebSockets) has been selected" error
   app.useWebSocketAdapter(new IoAdapter(app.getHttpServer()));

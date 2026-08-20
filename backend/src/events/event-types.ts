@@ -36,6 +36,14 @@ export const EVENT_TYPES = {
   AUTH_PASSWORD_RESET: 'auth.password_reset',
   AUTH_PASSWORD_CHANGED: 'auth.password_changed',
 
+  // An authorization denial — RolesGuard rejecting a role that isn't in a
+  // route's @Roles() list, or one of the hand-rolled `assertSuperAdmin`
+  // checks (AuditController, SystemController, NotificationController)
+  // throwing ForbiddenException. Published from the point of denial itself
+  // so a forbidden request doesn't just vanish after the 403 — see each
+  // call site's comment for exactly what it records.
+  SECURITY_FORBIDDEN: 'security.forbidden',
+
   NOTIFICATION_SENT: 'notification.sent',
 
   AI_PROVIDER_CHANGED: 'ai.provider_changed',
@@ -67,6 +75,7 @@ export const EVENT_CATEGORIES: Record<EventType, AuditCategory> = {
   [EVENT_TYPES.AUTH_LOGIN_FAILED]: AuditCategory.SECURITY,
   [EVENT_TYPES.AUTH_PASSWORD_RESET]: AuditCategory.SECURITY,
   [EVENT_TYPES.AUTH_PASSWORD_CHANGED]: AuditCategory.SECURITY,
+  [EVENT_TYPES.SECURITY_FORBIDDEN]: AuditCategory.SECURITY,
 
   [EVENT_TYPES.NOTIFICATION_SENT]: AuditCategory.NOTIFICATION,
 

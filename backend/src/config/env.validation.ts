@@ -34,6 +34,15 @@ export const envValidationSchema = Joi.object({
   RATE_LIMIT_TTL_MS: Joi.number().default(60000),
   RATE_LIMIT_MAX: Joi.number().default(300),
 
+  // Dedicated brute-force throttle for POST /auth/login — deliberately
+  // separate from and much stricter than RATE_LIMIT_MAX above (which is
+  // sized for normal API traffic across every route). Bucketed by IP +
+  // attempted email (see login-throttle.guard.ts), not IP alone, so one
+  // account under attack from a given IP doesn't lock out other legitimate
+  // accounts sharing that IP behind NAT/a corporate proxy.
+  LOGIN_RATE_LIMIT_TTL_MS: Joi.number().default(60000),
+  LOGIN_RATE_LIMIT_MAX: Joi.number().default(10),
+
   // Notifications — "smtp" is the only implemented channel today; the app is
   // structured so teams/slack/discord/push/sms can be added as new
   // NotificationProvider implementations without touching call sites.

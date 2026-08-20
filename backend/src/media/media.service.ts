@@ -79,9 +79,9 @@ export class MediaService {
     return { workspaceId: membership.workspaceId, role: membership.role };
   }
 
-  async upload(file: Express.Multer.File, userId: string, creatorId?: string): Promise<MediaResponse> {
+  async upload(file: Express.Multer.File, userId: string, creatorId?: string, callerRole?: Role): Promise<MediaResponse> {
     try {
-      return await this.processUpload(file, userId, creatorId);
+      return await this.processUpload(file, userId, creatorId, callerRole);
     } catch (err) {
       // Multer has already staged the file in .tmp by the time this method
       // runs, regardless of where processing fails (workspace resolution,
@@ -93,9 +93,9 @@ export class MediaService {
     }
   }
 
-  private async processUpload(file: Express.Multer.File, userId: string, creatorId?: string): Promise<MediaResponse> {
+  private async processUpload(file: Express.Multer.File, userId: string, creatorId?: string, callerRole?: Role): Promise<MediaResponse> {
     const workspaceId = await this.resolveWorkspaceId(userId);
-    await this.assertWithinUploadLimit(workspaceId, file.size);
+    await this.assertWithinUploadLimit(workspaceId, file.size, callerRole);
     if (creatorId) await this.assertCreatorInWorkspace(workspaceId, creatorId);
     const validated = await validateUploadedFile(file.originalname, file.path);
 
@@ -167,12 +167,12 @@ export class MediaService {
    * not the flat MEDIA_MAX_FILE_SIZE_MB Multer ceiling in media.module.ts,
    * which only exists as a technical backstop above the largest plan limit.
    */
-  private async assertWithinUploadLimit(workspaceId: string, fileSizeBytes: number): Promise<void> {
+  private async assertWithinUploadLimit(workspaceId: string, fileSizeBytes: number, callerRole?: Role): Promise<void> {
     const workspace = await this.prisma.workspace.findUniqueOrThrow({
       where: { id: workspaceId },
       select: { plan: true, maxUploadSizeMb: true },
     });
-    const limitMb = resolveUploadLimitMb(workspace.plan, workspace.maxUploadSizeMb);
+    const limitMb = resolveUploadLimitMb(workspace.plan, workspace.maxUploadSizeMb, callerRole);
     if (fileSizeBytes > limitMb * 1024 * 1024) {
       throw new PayloadTooLargeException(`File exceeds this workspace's ${limitMb}MB upload limit.`);
     }

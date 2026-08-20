@@ -7,12 +7,15 @@ import { ContactFormDto } from './dto/contact-form.dto';
 import { demoRequestTemplate } from './templates/demo-request.template';
 import { contactFormTemplate } from './templates/contact-form.template';
 import { generalNotificationTemplate } from './templates/general-notification.template';
+import { publishForbidden } from '../common/guards/publish-forbidden';
+import { SystemEventsService } from '../events/system-events.service';
 
 @Controller('notification')
 export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
+    private readonly systemEvents: SystemEventsService,
   ) {}
 
   private teamEmail(): string {
@@ -21,6 +24,7 @@ export class NotificationController {
 
   private assertSuperAdmin(req: any): void {
     if (req.user?.role !== 'SUPER_ADMIN') {
+      publishForbidden(this.systemEvents, req, ['SUPER_ADMIN'], 'super_admin_check');
       throw new ForbiddenException('Only a super admin can manage communication settings.');
     }
   }

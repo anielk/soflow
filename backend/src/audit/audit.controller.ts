@@ -3,14 +3,20 @@ import { AuditCategory } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuditService } from './audit.service';
 import { QueryAuditLogDto } from './dto/query-audit-log.dto';
+import { publishForbidden } from '../common/guards/publish-forbidden';
+import { SystemEventsService } from '../events/system-events.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('audit')
 export class AuditController {
-  constructor(private readonly auditService: AuditService) {}
+  constructor(
+    private readonly auditService: AuditService,
+    private readonly systemEvents: SystemEventsService,
+  ) {}
 
   private assertSuperAdmin(req: any): void {
     if (req.user?.role !== 'SUPER_ADMIN') {
+      publishForbidden(this.systemEvents, req, ['SUPER_ADMIN'], 'super_admin_check');
       throw new ForbiddenException('Only a super admin can view audit logs.');
     }
   }

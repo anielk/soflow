@@ -2,6 +2,7 @@ import { apiUrl, authHeaders, parseUploadErrorMessage, throwOnError } from './ap
 import { getAuthToken } from './auth';
 import type {
   ActivityLogItem,
+  AdminWorkspaceListItem,
   AuditLogItem,
   CreatorRecord,
   CreatorStats,
@@ -17,6 +18,39 @@ import type {
 export async function getWorkspace(): Promise<WorkspaceProfile> {
   const response = await fetch(apiUrl('/workspace'), { headers: authHeaders(), cache: 'no-store' });
   await throwOnError(response, 'Failed to load workspace');
+  return response.json();
+}
+
+export interface CreateWorkspaceInput {
+  name: string;
+}
+
+/** Creates an additional workspace with the caller as its OWNER. Any authenticated user may call this. */
+export async function createWorkspace(input: CreateWorkspaceInput): Promise<WorkspaceProfile> {
+  const response = await fetch(apiUrl('/workspace'), {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  await throwOnError(response, 'Failed to create workspace');
+  return response.json();
+}
+
+/** Platform-wide — SUPER_ADMIN only, 403s for anyone else. */
+export async function listWorkspacesForAdmin(): Promise<AdminWorkspaceListItem[]> {
+  const response = await fetch(apiUrl('/workspace/admin'), { headers: authHeaders(), cache: 'no-store' });
+  await throwOnError(response, 'Failed to load workspaces');
+  return response.json();
+}
+
+/** Platform-wide — SUPER_ADMIN only, 403s for anyone else. */
+export async function setWorkspaceActiveStatus(id: string, isActive: boolean): Promise<AdminWorkspaceListItem> {
+  const response = await fetch(apiUrl(`/workspace/admin/${id}`), {
+    method: 'PATCH',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ isActive }),
+  });
+  await throwOnError(response, 'Failed to update workspace status');
   return response.json();
 }
 

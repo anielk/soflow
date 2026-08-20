@@ -1,8 +1,12 @@
 import { Body, Controller, Delete, Get, Post, Patch, Param, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import { Role } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { WorkspaceService } from './workspace.service';
+import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import {
   UpdateWorkspaceDto,
   LOCALE_OPTIONS,
@@ -11,6 +15,7 @@ import {
   NUMBER_FORMAT_OPTIONS,
   CURRENCY_OPTIONS,
 } from './dto/update-workspace.dto';
+import { UpdateWorkspaceStatusDto } from './dto/update-workspace-status.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
 import { UpdateCreatorDto } from './dto/update-creator.dto';
@@ -25,9 +30,37 @@ export class WorkspaceController {
     return this.workspaceService.getWorkspace(req.user.userId);
   }
 
+  // Any authenticated user may create an additional workspace, becoming its
+  // OWNER — see WorkspaceService.create for why this doesn't require
+  // SUPER_ADMIN. Declared before the plain `@Patch()`/creators routes but
+  // after `@Get()` purely for readability; Nest matches by method+path, not
+  // declaration order, so this is safe regardless.
+  @Post()
+  create(@Body() dto: CreateWorkspaceDto, @Req() req: any) {
+    return this.workspaceService.create(req.user.userId, dto);
+  }
+
   @Patch()
   update(@Body() dto: UpdateWorkspaceDto, @Req() req: any) {
     return this.workspaceService.update(req.user.userId, dto);
+  }
+
+  // ─── Platform admin (SUPER_ADMIN only) ──────────────────────────────────
+  // Static 'admin' segment never collides with the dynamic creator routes
+  // below (:id there is always a Creator id, never reached via this path).
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  @Get('admin')
+  listAllForAdmin() {
+    return this.workspaceService.listAllForAdmin();
+  }
+
+  @UseGuards(RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  @Patch('admin/:id')
+  setWorkspaceStatus(@Param('id') id: string, @Body() dto: UpdateWorkspaceStatusDto, @Req() req: any) {
+    return this.workspaceService.setActiveStatus(req.user.userId, id, dto);
   }
 
   // Single source of truth for the option lists Settings > Localization

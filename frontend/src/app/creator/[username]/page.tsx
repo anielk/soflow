@@ -9,8 +9,8 @@ import { Globe, ExternalLink } from 'lucide-react';
 import { LogoIcon } from '@/components/brand/Logo';
 
 interface Creator {
+  username:     string;
   name?:        string;
-  email:        string;
   bio?:         string;
   avatarUrl?:   string;
   website?:     string;
@@ -57,19 +57,19 @@ export default function PublicCreatorPage({ params }: { params: Promise<{ userna
               {creator.avatarUrl ? (
                 <Image
                   src={creator.avatarUrl}
-                  alt={creator.name ?? creator.email}
+                  alt={creator.name ?? creator.username}
                   width={72}
                   height={72}
                   className="rounded-full object-cover"
                 />
               ) : (
-                <Avatar name={creator.name ?? creator.email} size="xl" />
+                <Avatar name={creator.name ?? creator.username} size="xl" />
               )}
               <div>
                 <h1 className="text-xl font-semibold text-text-primary">
-                  {creator.name ?? creator.email.split('@')[0]}
+                  {creator.name ?? creator.username}
                 </h1>
-                <p className="text-sm text-text-muted mt-0.5">{creator.email}</p>
+                <p className="text-sm text-text-muted mt-0.5">@{creator.username}</p>
               </div>
             </div>
 

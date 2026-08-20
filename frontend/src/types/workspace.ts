@@ -109,6 +109,18 @@ export interface OnboardingStatus {
   allRequiredDone:   boolean;
 }
 
+/** Platform-wide view — only ever fetched by a SUPER_ADMIN via /workspace/admin. */
+export interface AdminWorkspaceListItem {
+  id:          string;
+  name:        string;
+  slug:        string;
+  plan:        string;
+  isActive:    boolean;
+  memberCount: number;
+  createdAt:   string;
+  updatedAt:   string;
+}
+
 export interface WorkspaceMemberRecord {
   id:       string;
   role:     string;
