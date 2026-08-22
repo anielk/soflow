@@ -39,6 +39,7 @@ model User {
   creatorProfile      CreatorProfile?
   workspaceMembers    WorkspaceMember[]
   media               Media[]
+  posts               Post[]
 }
 
 model CreatorProfile {
@@ -94,6 +95,7 @@ model Workspace {
   aiConnections   AIConnection[]
   media           Media[]
   creators        Creator[]
+  posts           Post[]
 }
 
 model WorkspaceMember {
@@ -213,9 +215,58 @@ model Media {
   // their uploaded files — media just becomes unassigned, still visible in
   // the workspace's general library.
   creator          Creator?    @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  // Optional: which Post (if any) this file is attached to. SetNull, not
+  // Cascade — deleting a post must not delete the underlying media, since
+  // the same upload could conceivably be reused and the file itself still
+  // belongs to the workspace's library either way.
+  postId           String?
+  post             Post?       @relation(fields: [postId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([creatorId])
+  @@index([postId])
+}
+
+// ─── Posts (content composer / publishing queue) ─────────────────────────────
+// Deliberately narrow scope: this models the *content and its schedule*, not
+// distribution. There is no integration with any external platform (OnlyFans,
+// Fanvue, ...) — see Settings > Platforms, which is honest about that — so a
+// Post only ever reaches DRAFT or SCHEDULED here. Nothing "publishes" itself;
+// there is no background job that flips a SCHEDULED post to a PUBLISHED
+// state, because there is nowhere for it to actually go yet. Adding a real
+// PUBLISHED state belongs together with the first real platform integration,
+// not before it.
+
+enum PostType {
+  FREE
+  PPV
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  workspaceId String
+  authorId    String
+  caption     String?    @db.Text
+  type        PostType   @default(FREE)
+  // Informational only (no payment processing exists) — mirrors how Workspace.plan
+  // is stored as plain data with no enforcement engine behind it yet.
+  price       Int?
+  status      PostStatus @default(DRAFT)
+  scheduledAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author      User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  media       Media[]
+
+  @@index([workspaceId])
+  @@index([authorId])
+  @@index([status])
 }
 
 // ─── Creators (agency-managed roster) ────────────────────────────────────────
@@ -265,6 +316,7 @@ enum AuditCategory {
   SETTINGS
   SECURITY
   SYSTEM
+  CONTENT
 }
 
 // Structured, append-only trail for administrators and the Cloudivo

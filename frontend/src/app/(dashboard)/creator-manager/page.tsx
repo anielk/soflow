@@ -6,7 +6,7 @@ import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button, ComingSoonNotice } from '@/components/ui';
 import { FilePlus, Eye, TrendingUp, CalendarClock, Users, Heart, MessageCircle, ImageIcon, Video } from 'lucide-react';
 import { formatCurrency, formatNumber, relativeTime, timeUntil } from '@/lib/format';
-import type { Post, MediaType } from '@/types/workspace';
+import type { MediaType } from '@/types/workspace';
 
 const TODAY_STATS = [
   { label: 'Views today',      value: 2847,   format: 'number',   color: '#8B5CF6', icon: Eye           },
@@ -15,7 +15,23 @@ const TODAY_STATS = [
   { label: 'New subscribers',  value: 14,     format: 'number',   color: '#EC4899', icon: Users         },
 ] as const;
 
-const MOCK_POSTS: Post[] = [
+/**
+ * Illustrative only — there is no post-level analytics engine (views, likes,
+ * earnings) behind this widget. Distinct from the real `Post` type in
+ * @/types/workspace, which now backs actual drafts/scheduled posts (see
+ * Publishing Queue) — this local shape exists only so this preview widget
+ * can keep showing example engagement numbers without implying those are
+ * real API fields.
+ */
+interface MockEngagementPost {
+  id: string; title: string; caption: string;
+  type: 'free' | 'ppv'; status: 'published' | 'scheduled';
+  price?: number; publishedAt?: string; scheduledAt?: string;
+  likes: number; views: number; comments: number; earnings: number;
+  mediaCount: number; mediaType: MediaType;
+}
+
+const MOCK_POSTS: MockEngagementPost[] = [
   {
     id: '1', title: 'Morning workout routine',
     caption: 'Starting the day right! Full upper body workout.',
@@ -85,7 +101,7 @@ export default function OFManagerHomePage() {
 
       <ComingSoonNotice
         feature="Content Manager"
-        description="Post publishing/scheduling isn't implemented — there is no Post data model yet. Everything below is example data. Real, working media management lives at Creator Manager → Vault."
+        description="This overview still shows example engagement data — there is no analytics engine (views/likes/earnings) yet. Drafts and scheduled posts you create are real, though: see Publishing Queue."
       />
 
       {/* Today's stats */}

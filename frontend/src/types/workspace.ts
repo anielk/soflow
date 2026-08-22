@@ -1,24 +1,23 @@
 export type PostType        = 'free' | 'ppv';
-export type PostStatus      = 'published' | 'scheduled' | 'draft' | 'failed';
+// Only 'draft' and 'scheduled' are real today — there is no platform
+// integration to actually publish to, so a Post never reaches 'published'
+// here (see backend Post model comment). Kept as a 2-value union rather than
+// speculatively including 'published'/'failed' states nothing produces yet.
+export type PostStatus      = 'draft' | 'scheduled';
 export type MediaType       = 'image' | 'video' | 'document';
 export type NotifType       = 'like' | 'tip' | 'subscription' | 'renewal' | 'comment' | 'ppv_unlock';
 export type StatementStatus = 'paid' | 'pending' | 'processing';
 
 export interface Post {
   id:           string;
-  title:        string;
   caption:      string;
   type:         PostType;
   status:       PostStatus;
   price?:       number;
   scheduledAt?: string;
-  publishedAt?: string;
-  likes:        number;
-  views:        number;
-  comments:     number;
-  earnings:     number;
-  mediaCount:   number;
-  mediaType:    MediaType;
+  mediaIds:     string[];
+  createdAt:    string;
+  updatedAt:    string;
 }
 
 export type MediaFileStatus = 'processing' | 'ready' | 'failed';
@@ -162,11 +161,13 @@ export interface CreatorStats {
 }
 
 export interface DashboardStats {
-  totalCreators:  number;
-  activeCreators: number;
-  mediaCount:     number;
-  storageBytes:   number;
-  memberCount:    number;
+  totalCreators:      number;
+  activeCreators:     number;
+  mediaCount:         number;
+  storageBytes:       number;
+  memberCount:        number;
+  draftPostCount:     number;
+  scheduledPostCount: number;
 }
 
 export interface ActivityLogItem {

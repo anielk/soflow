@@ -30,6 +30,10 @@ export const EVENT_TYPES = {
   MEDIA_UPLOADED: 'media.uploaded',
   MEDIA_DELETED: 'media.deleted',
 
+  POST_CREATED: 'post.created',
+  POST_UPDATED: 'post.updated',
+  POST_DELETED: 'post.deleted',
+
   AUTH_LOGIN: 'auth.login',
   AUTH_LOGOUT: 'auth.logout',
   AUTH_LOGIN_FAILED: 'auth.login_failed',
@@ -69,6 +73,10 @@ export const EVENT_CATEGORIES: Record<EventType, AuditCategory> = {
 
   [EVENT_TYPES.MEDIA_UPLOADED]: AuditCategory.MEDIA,
   [EVENT_TYPES.MEDIA_DELETED]: AuditCategory.MEDIA,
+
+  [EVENT_TYPES.POST_CREATED]: AuditCategory.CONTENT,
+  [EVENT_TYPES.POST_UPDATED]: AuditCategory.CONTENT,
+  [EVENT_TYPES.POST_DELETED]: AuditCategory.CONTENT,
 
   [EVENT_TYPES.AUTH_LOGIN]: AuditCategory.AUTH,
   [EVENT_TYPES.AUTH_LOGOUT]: AuditCategory.AUTH,

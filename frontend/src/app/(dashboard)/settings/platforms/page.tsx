@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import { Badge, Button } from '@/components/ui';
-import { ExternalLink, CheckCircle2, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
 interface Platform {
   id:          string;
@@ -13,14 +13,20 @@ interface Platform {
   description: string;
   logoLetter:  string;
   logoColor:   string;
-  status:      'available' | 'coming_soon';
+  // Every platform is 'coming_soon' — there is no working integration with
+  // any external platform yet (no OAuth flow, no API client, nothing to
+  // actually connect to). This used to mark OnlyFans 'available' with a
+  // clickable "Connect" button that had no handler wired to it — a fake
+  // working-looking feature. Don't reintroduce an 'available' status until
+  // a real connection flow exists behind it.
+  status:      'coming_soon';
 }
 
 const PLATFORMS: Platform[] = [
   {
     id: 'onlyfans', name: 'OnlyFans', category: 'creator',
     description: 'Connect OnlyFans creator accounts to manage posts, messages, fans, and revenue from Leinaflow.',
-    logoLetter: 'O', logoColor: '#00AFF0', status: 'available',
+    logoLetter: 'O', logoColor: '#00AFF0', status: 'coming_soon',
   },
   {
     id: 'fansly', name: 'Fansly', category: 'creator',
@@ -135,16 +141,9 @@ export default function PlatformsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-sm font-semibold text-text-primary">{platform.name}</p>
-                      {platform.status === 'available' && (
-                        <Badge variant="success" size="sm">
-                          <CheckCircle2 size={10} className="mr-1" /> Available
-                        </Badge>
-                      )}
-                      {platform.status === 'coming_soon' && (
-                        <Badge variant="default" size="sm">
-                          <Clock size={10} className="mr-1" /> Coming soon
-                        </Badge>
-                      )}
+                      <Badge variant="default" size="sm">
+                        <Clock size={10} className="mr-1" /> Coming soon
+                      </Badge>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
                       {platform.description}
@@ -153,15 +152,9 @@ export default function PlatformsPage() {
 
                   {/* Action */}
                   <div className="shrink-0">
-                    {platform.status === 'available' ? (
-                      <Button variant="secondary" size="sm" className="gap-1.5">
-                        Connect <ExternalLink size={11} />
-                      </Button>
-                    ) : (
-                      <Button variant="ghost" size="sm" disabled>
-                        Notify me
-                      </Button>
-                    )}
+                    <Button variant="ghost" size="sm" disabled>
+                      Notify me
+                    </Button>
                   </div>
                 </div>
               ))}

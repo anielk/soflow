@@ -1,16 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Button, Input, Textarea, ComingSoonNotice } from '@/components/ui';
-import { Upload, X, ImageIcon, Video } from 'lucide-react';
+import { Button, Input, Textarea } from '@/components/ui';
+import { Upload, X, ImageIcon, Video, Loader2 } from 'lucide-react';
+import { createPost, getPost, updatePost } from '@/lib/posts';
+import { uploadMedia } from '@/lib/media';
+import type { PostType } from '@/types/workspace';
 
-type PostType     = 'free' | 'ppv';
 type ScheduleMode = 'now' | 'later';
+
+interface PendingFile {
+  file: File;
+  name: string;
+  type: 'image' | 'video';
+}
 
 export default function NewPostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get('id');
 
   const [postType,     setPostType]     = useState<PostType>('free');
   const [price,        setPrice]        = useState('');
@@ -18,17 +28,42 @@ export default function NewPostPage() {
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('now');
   const [schedDate,    setSchedDate]    = useState('');
   const [schedTime,    setSchedTime]    = useState('');
-  const [mediaFiles,   setMediaFiles]   = useState<{ name: string; type: 'image' | 'video' }[]>([]);
+  const [mediaFiles,   setMediaFiles]   = useState<PendingFile[]>([]);
+  const [existingMediaIds, setExistingMediaIds] = useState<string[]>([]);
+
+  const [loading,      setLoading]      = useState(Boolean(editingId));
+  const [submitting,   setSubmitting]   = useState(false);
+  const [error,        setError]        = useState('');
 
   useEffect(() => {
     if (!isAuthenticated()) router.push('/login');
   }, [router]);
 
+  useEffect(() => {
+    if (!editingId) return;
+    getPost(editingId)
+      .then((post) => {
+        setCaption(post.caption);
+        setPostType(post.type);
+        setPrice(post.price != null ? String(post.price) : '');
+        setExistingMediaIds(post.mediaIds);
+        if (post.scheduledAt) {
+          const d = new Date(post.scheduledAt);
+          setScheduleMode('later');
+          setSchedDate(d.toISOString().slice(0, 10));
+          setSchedTime(d.toISOString().slice(11, 16));
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load post'))
+      .finally(() => setLoading(false));
+  }, [editingId]);
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
-    const files = Array.from(e.dataTransfer.files).map((f) => ({
-      name: f.name,
-      type: (f.type.startsWith('video') ? 'video' : 'image') as 'image' | 'video',
+    const files = Array.from(e.dataTransfer.files).map((file) => ({
+      file,
+      name: file.name,
+      type: (file.type.startsWith('video') ? 'video' : 'image') as 'image' | 'video',
     }));
     setMediaFiles((prev) => [...prev, ...files]);
   }
@@ -37,11 +72,51 @@ export default function NewPostPage() {
     setMediaFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    // There is no Post data model or endpoint — this used to silently
-    // redirect to /queue as if the post had been created/scheduled, which
-    // was actively misleading (it looked like it worked). Now a no-op.
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError('');
+
+    let scheduledAt: string | undefined;
+    if (scheduleMode === 'later') {
+      if (!schedDate || !schedTime) {
+        setError('Pick a date and time to schedule this post, or switch to "Save now".');
+        return;
+      }
+      scheduledAt = new Date(`${schedDate}T${schedTime}`).toISOString();
+    }
+
+    setSubmitting(true);
+    try {
+      const uploadedIds = await Promise.all(mediaFiles.map((pf) => uploadMedia(pf.file).then((m) => m.id)));
+      const mediaIds = [...existingMediaIds, ...uploadedIds];
+
+      const input = {
+        caption: caption || undefined,
+        type: postType,
+        price: postType === 'ppv' && price ? Number(price) : undefined,
+        scheduledAt,
+        mediaIds,
+      };
+
+      if (editingId) {
+        await updatePost(editingId, input);
+      } else {
+        await createPost(input);
+      }
+      router.push('/creator-manager/queue');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save post');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl flex items-center justify-center py-24">
+        <Loader2 size={20} className="animate-spin text-text-muted" />
+      </div>
+    );
   }
 
   return (
@@ -49,18 +124,21 @@ export default function NewPostPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-text-primary">New post</h1>
-          <p className="mt-1 text-sm text-text-muted">Create and schedule content for your creator.</p>
+          <h1 className="text-xl font-semibold text-text-primary">{editingId ? 'Edit post' : 'New post'}</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {editingId ? 'Update this draft or scheduled post.' : 'Draft or schedule content for your creator.'}
+          </p>
         </div>
         <Button variant="ghost" size="md" icon={X} onClick={() => router.back()}>
-          Discard
+          Cancel
         </Button>
       </div>
 
-      <ComingSoonNotice
-        feature="Post publishing"
-        description="There is no Post data model or publishing endpoint yet — submitting this form does nothing. To actually upload and manage media today, use Creator Manager → Vault."
-      />
+      {error && (
+        <div className="bg-danger-subtle border border-danger-text/20 text-danger-text text-sm rounded-lg px-4 py-3">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Post type */}
@@ -97,7 +175,7 @@ export default function NewPostPage() {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="e.g. 15"
-                hint="Fans pay this amount to unlock the post."
+                hint="Stored with the post — there is no payment processing behind this yet."
               />
             )}
           </div>
@@ -109,7 +187,6 @@ export default function NewPostPage() {
             Media
           </h2>
           <div className="bg-bg-surface border border-bg-border/60 rounded-xl p-5 space-y-3">
-            {/* Drop zone */}
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
@@ -121,27 +198,30 @@ export default function NewPostPage() {
               <div>
                 <p className="text-sm font-medium text-text-primary">Upload media</p>
                 <p className="text-xs text-text-muted mt-0.5">
-                  Drag & drop or click to upload · JPG, PNG, MP4, MOV
+                  Drag & drop · uploaded to your Media Library and attached to this post
                 </p>
               </div>
               <span className="text-xs text-text-disabled">Max 2 GB per file</span>
             </div>
 
-            {/* Uploaded file list */}
+            {existingMediaIds.length > 0 && (
+              <p className="text-xs text-text-muted">{existingMediaIds.length} file(s) already attached.</p>
+            )}
+
             {mediaFiles.length > 0 && (
               <ul className="space-y-1.5">
-                {mediaFiles.map((file, i) => (
+                {mediaFiles.map((pf, i) => (
                   <li
                     key={i}
                     className="flex items-center gap-2.5 px-3 py-2 bg-bg-subtle rounded-lg"
                   >
                     <div className="w-6 h-6 rounded flex items-center justify-center bg-bg-overlay shrink-0">
-                      {file.type === 'video'
+                      {pf.type === 'video'
                         ? <Video size={12} className="text-violet-400" />
                         : <ImageIcon size={12} className="text-blue-400" />
                       }
                     </div>
-                    <span className="flex-1 text-xs text-text-primary truncate">{file.name}</span>
+                    <span className="flex-1 text-xs text-text-primary truncate">{pf.name}</span>
                     <button
                       type="button"
                       onClick={() => removeMedia(i)}
@@ -182,7 +262,7 @@ export default function NewPostPage() {
           <div className="bg-bg-surface border border-bg-border/60 rounded-xl p-5 space-y-3">
             <div className="flex flex-col gap-2.5">
               {([
-                { value: 'now',   label: 'Post now' },
+                { value: 'now',   label: 'Save now (draft)' },
                 { value: 'later', label: 'Schedule for later' },
               ] as const).map(({ value, label }) => (
                 <label key={value} className="flex items-center gap-2.5 cursor-pointer group">
@@ -199,6 +279,10 @@ export default function NewPostPage() {
                 </label>
               ))}
             </div>
+            <p className="text-xs text-text-muted">
+              There is no integration with any platform yet, so nothing is actually distributed — this only saves
+              the post and, if scheduled, its date/time to your Publishing Queue.
+            </p>
 
             {scheduleMode === 'later' && (
               <div className="grid grid-cols-2 gap-3 pt-1">
@@ -220,17 +304,19 @@ export default function NewPostPage() {
         </section>
 
         {/* Actions */}
-        <div className="flex items-center justify-between gap-4 pt-2">
-          <Button type="button" variant="secondary" size="md" onClick={() => router.back()}>
-            Save as draft
-          </Button>
+        <div className="flex items-center justify-end gap-3 pt-2">
           <Button
             type="submit"
             variant="primary"
             size="md"
-            disabled
+            disabled={submitting}
+            loading={submitting}
           >
-            {scheduleMode === 'now' ? 'Post now (not implemented)' : 'Schedule post (not implemented)'}
+            {submitting
+              ? 'Saving…'
+              : scheduleMode === 'now'
+                ? (editingId ? 'Save changes' : 'Save draft')
+                : (editingId ? 'Save schedule' : 'Schedule post')}
           </Button>
         </div>
       </form>

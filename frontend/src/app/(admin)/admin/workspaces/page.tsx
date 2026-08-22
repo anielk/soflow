@@ -162,7 +162,7 @@ export default function AdminWorkspacesPage() {
         <p className="text-xs text-text-muted leading-relaxed">
           Workspaces scope all entities: users, creator accounts, platform connections, and AI configurations.
           A user can be a member of multiple workspaces with different roles in each — creating a workspace here
-          makes you its OWNER, same as registration does for a new account's first workspace.
+          makes you its OWNER, same as registration does for a new account&apos;s first workspace.
         </p>
       </div>
 

@@ -1,45 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { Badge, Button, ComingSoonNotice } from '@/components/ui';
-import { FilePlus, Search, ChevronUp, ChevronDown, CalendarClock, ImageIcon, Video } from 'lucide-react';
+import { Badge, Button, EmptyState, useToast } from '@/components/ui';
+import { FilePlus, Search, ChevronUp, ChevronDown, CalendarClock, Loader2, Trash2 } from 'lucide-react';
 import { timeUntil } from '@/lib/format';
-import type { Post, PostType, MediaType } from '@/types/workspace';
+import { listPosts, deletePost } from '@/lib/posts';
+import type { Post, PostType } from '@/types/workspace';
 
-const MOCK_QUEUE: Post[] = [
-  {
-    id: '4', title: 'Cooking with me 🍝', caption: 'Making my favourite pasta recipe.',
-    type: 'free', status: 'scheduled', scheduledAt: '2026-06-28T16:00:00Z',
-    likes: 0, views: 0, comments: 0, earnings: 0, mediaCount: 2, mediaType: 'video',
-  },
-  {
-    id: '5', title: 'Evening yoga session', caption: 'Wind down with a 30-minute yoga flow.',
-    type: 'free', status: 'scheduled', scheduledAt: '2026-06-28T20:00:00Z',
-    likes: 0, views: 0, comments: 0, earnings: 0, mediaCount: 1, mediaType: 'video',
-  },
-  {
-    id: '6', title: 'Studio shoot — new outfits', caption: '',
-    type: 'ppv', status: 'scheduled', price: 20, scheduledAt: '2026-06-29T12:00:00Z',
-    likes: 0, views: 0, comments: 0, earnings: 0, mediaCount: 18, mediaType: 'image',
-  },
-  {
-    id: '7', title: 'Morning run vlog', caption: 'My 5km Saturday morning run.',
-    type: 'free', status: 'scheduled', scheduledAt: '2026-06-30T08:00:00Z',
-    likes: 0, views: 0, comments: 0, earnings: 0, mediaCount: 1, mediaType: 'video',
-  },
-  {
-    id: '8', title: 'Exclusive pool content', caption: '',
-    type: 'ppv', status: 'scheduled', price: 30, scheduledAt: '2026-07-01T14:00:00Z',
-    likes: 0, views: 0, comments: 0, earnings: 0, mediaCount: 8, mediaType: 'image',
-  },
-];
-
-type SortField = 'scheduledAt' | 'title' | 'type';
+type SortField = 'scheduledAt' | 'caption' | 'type';
 type SortDir   = 'asc' | 'desc';
-
-const MEDIA_COLOR: Record<MediaType, string> = { video: '#7C3AED', image: '#3B82F6', document: '#F59E0B' };
 
 function PostTypeBadge({ type, price }: { type: PostType; price?: number }) {
   if (type === 'ppv' && price != null) {
@@ -50,13 +21,26 @@ function PostTypeBadge({ type, price }: { type: PostType; price?: number }) {
 
 export default function QueuePage() {
   const router = useRouter();
-  const [query,     setQuery]     = useState('');
-  const [sortField, setSortField] = useState<SortField>('scheduledAt');
-  const [sortDir,   setSortDir]   = useState<SortDir>('asc');
+  const { showToast } = useToast();
+
+  const [posts,     setPosts]     = useState<Post[] | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [query,      setQuery]     = useState('');
+  const [sortField,  setSortField] = useState<SortField>('scheduledAt');
+  const [sortDir,    setSortDir]   = useState<SortDir>('asc');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    setLoadError('');
+    listPosts()
+      .then(setPosts)
+      .catch((err) => setLoadError(err instanceof Error ? err.message : 'Failed to load posts'));
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated()) router.push('/login');
-  }, [router]);
+    else load();
+  }, [router, load]);
 
   function toggleSort(field: SortField) {
     if (sortField === field) {
@@ -67,8 +51,21 @@ export default function QueuePage() {
     }
   }
 
-  const rows = [...MOCK_QUEUE]
-    .filter((p) => p.title.toLowerCase().includes(query.toLowerCase()))
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      await deletePost(id);
+      setPosts((prev) => prev?.filter((p) => p.id !== id) ?? null);
+      showToast('Post deleted', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to delete post', 'error');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const rows = [...(posts ?? [])]
+    .filter((p) => p.caption.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
       const av = a[sortField] ?? '';
       const bv = b[sortField] ?? '';
@@ -89,7 +86,9 @@ export default function QueuePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Publishing Queue</h1>
-          <p className="mt-1 text-sm text-text-muted">{MOCK_QUEUE.length} posts scheduled</p>
+          <p className="mt-1 text-sm text-text-muted">
+            {posts ? `${posts.length} post${posts.length === 1 ? '' : 's'}` : 'Loading…'}
+          </p>
         </div>
         <Button
           variant="primary"
@@ -97,14 +96,14 @@ export default function QueuePage() {
           icon={FilePlus}
           onClick={() => router.push('/creator-manager/new-post')}
         >
-          Add to queue
+          New post
         </Button>
       </div>
 
-      <ComingSoonNotice
-        feature="Publishing queue"
-        description="There is no Post data model or scheduling backend yet — the posts below are examples, not real scheduled content."
-      />
+      <p className="text-xs text-text-muted -mt-3">
+        Drafts and scheduled posts here are real and persisted. There is no platform integration yet, so scheduled
+        posts wait here rather than being automatically sent anywhere.
+      </p>
 
       {/* Card */}
       <div className="bg-bg-surface border border-bg-border/60 rounded-xl overflow-hidden">
@@ -120,68 +119,67 @@ export default function QueuePage() {
           />
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-bg-border/40">
-                {[
-                  { field: 'title' as const,       label: 'Post' },
-                  { field: 'type' as const,         label: 'Type' },
-                  { field: 'scheduledAt' as const,  label: 'Scheduled' },
-                ].map(({ field, label }) => (
-                  <th
-                    key={field}
-                    className="text-left text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em] px-4 py-2.5 cursor-pointer hover:text-text-secondary transition-colors"
-                    onClick={() => toggleSort(field)}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {label}
-                      <SortIcon field={field} />
-                    </span>
+        {loadError ? (
+          <EmptyState icon={CalendarClock} title="Couldn't load posts" description={loadError} size="md" />
+        ) : !posts ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 size={20} className="animate-spin text-text-muted" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-bg-border/40">
+                  {[
+                    { field: 'caption' as const,      label: 'Post' },
+                    { field: 'type' as const,         label: 'Type' },
+                    { field: 'scheduledAt' as const,  label: 'Scheduled' },
+                  ].map(({ field, label }) => (
+                    <th
+                      key={field}
+                      className="text-left text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em] px-4 py-2.5 cursor-pointer hover:text-text-secondary transition-colors"
+                      onClick={() => toggleSort(field)}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {label}
+                        <SortIcon field={field} />
+                      </span>
+                    </th>
+                  ))}
+                  <th className="text-left text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em] px-4 py-2.5">
+                    Status
                   </th>
-                ))}
-                <th className="text-left text-[11px] font-semibold text-text-disabled uppercase tracking-[0.06em] px-4 py-2.5">
-                  Status
-                </th>
-                <th className="px-4 py-2.5 w-12" />
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-bg-border/40">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-16 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <CalendarClock size={24} className="text-text-muted" />
-                      <p className="text-sm text-text-muted">No posts match your search</p>
-                    </div>
-                  </td>
+                  <th className="px-4 py-2.5 w-20" />
                 </tr>
-              )}
-              {rows.map((post) => {
-                const color = MEDIA_COLOR[post.mediaType];
-                return (
+              </thead>
+
+              <tbody className="divide-y divide-bg-border/40">
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <CalendarClock size={24} className="text-text-muted" />
+                        <p className="text-sm text-text-muted">
+                          {posts.length === 0 ? 'No drafts or scheduled posts yet' : 'No posts match your search'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {rows.map((post) => (
                   <tr
                     key={post.id}
                     className="hover:bg-bg-subtle/40 transition-colors duration-100"
                   >
-                    {/* Post title */}
+                    {/* Caption preview */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ background: `${color}18` }}
-                        >
-                          {post.mediaType === 'video'
-                            ? <Video size={13} style={{ color }} />
-                            : <ImageIcon size={13} style={{ color }} />
-                          }
-                        </div>
-                        <div>
-                          <p className="font-medium text-text-primary">{post.title}</p>
-                          <p className="text-xs text-text-muted">{post.mediaCount} {post.mediaType === 'video' ? 'video' : 'photo'}{post.mediaCount > 1 ? 's' : ''}</p>
-                        </div>
+                      <div>
+                        <p className="font-medium text-text-primary truncate max-w-xs">
+                          {post.caption || <span className="text-text-disabled italic">No caption</span>}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          {post.mediaIds.length} file{post.mediaIds.length === 1 ? '' : 's'} attached
+                        </p>
                       </div>
                     </td>
 
@@ -206,24 +204,36 @@ export default function QueuePage() {
 
                     {/* Status */}
                     <td className="px-4 py-3">
-                      <Badge variant="warning" size="sm">Scheduled</Badge>
+                      {post.status === 'scheduled'
+                        ? <Badge variant="warning" size="sm">Scheduled</Badge>
+                        : <Badge variant="default" size="sm">Draft</Badge>
+                      }
                     </td>
 
                     {/* Actions */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
                       <button
                         type="button"
-                        className="text-xs text-text-muted hover:text-violet-400 transition-colors"
+                        onClick={() => router.push(`/creator-manager/new-post?id=${post.id}`)}
+                        className="text-xs text-text-muted hover:text-violet-400 transition-colors mr-3"
                       >
                         Edit
                       </button>
+                      <button
+                        type="button"
+                        disabled={deletingId === post.id}
+                        onClick={() => handleDelete(post.id)}
+                        className="text-text-muted hover:text-danger-text transition-colors disabled:opacity-50"
+                      >
+                        {deletingId === post.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
 import { EmptyState, Skeleton } from '@/components/ui';
 import { QuickActionsRow, OnboardingChecklist } from '@/components/dashboard';
-import { UsersRound, UserCheck, Image as ImageIcon, HardDrive, Users, History, TrendingUp } from 'lucide-react';
+import { UsersRound, UserCheck, Image as ImageIcon, HardDrive, Users, History, TrendingUp, FileEdit, CalendarClock } from 'lucide-react';
 import { getDashboardStats, listWorkspaceActivity } from '@/lib/workspace';
 import { relativeTime } from '@/lib/format';
 import type { ActivityLogItem, DashboardStats } from '@/types/workspace';
@@ -46,6 +46,8 @@ export default function DashboardPage() {
         { label: 'Media files', value: String(stats.mediaCount), icon: ImageIcon, color: '#3B82F6' },
         { label: 'Storage used', value: formatBytes(stats.storageBytes), icon: HardDrive, color: '#F59E0B' },
         { label: 'Workspace members', value: String(stats.memberCount), icon: Users, color: '#EC4899' },
+        { label: 'Draft posts', value: String(stats.draftPostCount), icon: FileEdit, color: '#64748B' },
+        { label: 'Scheduled posts', value: String(stats.scheduledPostCount), icon: CalendarClock, color: '#06B6D4' },
       ]
     : [];
 

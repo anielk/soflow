@@ -14,6 +14,7 @@ import { ServiceConfigService } from './config/service-config.service';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { CreatorsModule } from './creators/creators.module';
 import { MediaModule } from './media/media.module';
+import { PostsModule } from './posts/posts.module';
 import { WorkspaceModule } from './workspace/workspace.module';
 import { NotificationModule } from './notification/notification.module';
 import { EventsModule } from './events/events.module';
@@ -51,6 +52,7 @@ import { AppController } from './app.controller';
     DashboardModule,
     CreatorsModule,
     MediaModule,
+    PostsModule,
     WorkspaceModule,
     NotificationModule,
     AuditModule,

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/lib/auth';
-import { EmptyState, Skeleton } from '@/components/ui';
+import { EmptyState } from '@/components/ui';
 import { Users, TrendingUp, UserMinus } from 'lucide-react';
 
 const STAT_PREVIEWS = [
@@ -48,7 +48,7 @@ export default function FansPage() {
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-disabled mb-1.5">
                 {label}
               </p>
-              <Skeleton width={48} height={18} className="rounded" />
+              <p className="text-sm font-semibold text-text-disabled">—</p>
             </div>
           </div>
         ))}
