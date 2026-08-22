@@ -17,6 +17,53 @@ interface PendingFile {
   type: 'image' | 'video';
 }
 
+/**
+ * Local YYYY-MM-DD for a native <input type="date"> value. Must be built
+ * from local calendar components (getFullYear/getMonth/getDate) — not
+ * toISOString(), which is UTC and silently shifts the displayed date by a
+ * day for anyone whose local offset crosses midnight relative to UTC.
+ */
+function toLocalDateValue(d: Date): string {
+  const year  = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day   = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Local HH:mm for a native <input type="time"> value. The DOM requires
+ * exactly this zero-padded 24-hour format regardless of how the browser
+ * chooses to *display* it (e.g. locale-formatted with AM/PM) — handing it
+ * anything else (including a UTC time when the viewer isn't in UTC) can
+ * desync what's shown from what's actually stored, and a malformed string
+ * here is what makes the browser reject the field as "Invalid value". Built
+ * from local calendar components for the same reason as toLocalDateValue.
+ */
+function toLocalTimeValue(d: Date): string {
+  const hours   = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+/**
+ * Combines a <input type="date"> value and a <input type="time"> value —
+ * both always local, zero-padded, 24-hour strings per the HTML spec — into
+ * the Date they represent. Parses each field explicitly rather than
+ * concatenating them into a string for `new Date(...)`, so the result never
+ * depends on a JS engine's string-parsing behavior. Returns null if either
+ * field isn't in the exact format the native inputs are supposed to emit.
+ */
+function combineLocalDateAndTime(dateValue: string, timeValue: string): Date | null {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(timeValue);
+  if (!dateMatch || !timeMatch) return null;
+
+  const [, year, month, day] = dateMatch;
+  const [, hours, minutes] = timeMatch;
+  const combined = new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes), 0, 0);
+  return Number.isNaN(combined.getTime()) ? null : combined;
+}
+
 export default function NewPostPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -50,8 +97,8 @@ export default function NewPostPage() {
         if (post.scheduledAt) {
           const d = new Date(post.scheduledAt);
           setScheduleMode('later');
-          setSchedDate(d.toISOString().slice(0, 10));
-          setSchedTime(d.toISOString().slice(11, 16));
+          setSchedDate(toLocalDateValue(d));
+          setSchedTime(toLocalTimeValue(d));
         }
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load post'))
@@ -82,7 +129,16 @@ export default function NewPostPage() {
         setError('Pick a date and time to schedule this post, or switch to "Save now".');
         return;
       }
-      scheduledAt = new Date(`${schedDate}T${schedTime}`).toISOString();
+      const combined = combineLocalDateAndTime(schedDate, schedTime);
+      if (!combined) {
+        setError('That date/time is not valid. Please re-select the date and time.');
+        return;
+      }
+      if (combined.getTime() <= Date.now()) {
+        setError('Pick a date and time in the future to schedule this post.');
+        return;
+      }
+      scheduledAt = combined.toISOString();
     }
 
     setSubmitting(true);
