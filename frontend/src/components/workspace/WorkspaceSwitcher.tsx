@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Loader2 } from 'lucide-react';
-import { Avatar } from '@/components/ui';
+import { Check, ChevronDown, Loader2, Plus } from 'lucide-react';
+import { Avatar, Button, Input, Modal } from '@/components/ui';
 import { LogoIcon } from '@/components/brand/Logo';
+import { createWorkspace as createWorkspaceRequest } from '@/lib/workspace';
 import { useWorkspace } from './WorkspaceContext';
 
 interface WorkspaceSwitcherProps {
@@ -14,13 +15,20 @@ interface WorkspaceSwitcherProps {
  * The sidebar's workspace header, wired to WorkspaceContext. Replaces the
  * old static "Leinaflow" label + inert chevron with a real switcher: shows
  * the active workspace, opens a dropdown of every workspace the caller
- * belongs to, and switches on click. Same hand-rolled dropdown pattern as
- * UserMenu.tsx (ref + outside-click/Escape listeners) — there is no shared
- * Dropdown primitive in this codebase yet to reuse instead.
+ * belongs to, switches on click, and lets the caller create a new one
+ * (any authenticated user may — see WorkspaceService.create's own comment;
+ * this was previously only reachable via the SUPER_ADMIN admin panel). Same
+ * hand-rolled dropdown pattern as UserMenu.tsx (ref + outside-click/Escape
+ * listeners) — there is no shared Dropdown primitive in this codebase yet
+ * to reuse instead.
  */
 export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps) {
-  const { workspaces, activeWorkspace, cachedName, loading, error, switching, switchWorkspace } = useWorkspace();
+  const { workspaces, activeWorkspace, cachedName, loading, error, switching, switchWorkspace, refresh } = useWorkspace();
   const [open, setOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,6 +51,36 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
     await switchWorkspace(workspaceId);
     // No setOpen(false) on success — switchWorkspace() reloads the page.
     // On failure the dropdown stays open so the error message is visible.
+  }
+
+  // Closes the switcher dropdown before opening the modal — Modal's own
+  // full-screen backdrop makes leaving the dropdown open underneath it
+  // pointless, same reasoning as closing any menu before a dialog opens.
+  function handleOpenCreate() {
+    setOpen(false);
+    setNewName('');
+    setCreateError(null);
+    setShowCreate(true);
+  }
+
+  async function submitCreate() {
+    const trimmed = newName.trim();
+    if (!trimmed || creating) return; // empty name and double-submit guard
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await createWorkspaceRequest({ name: trimmed });
+      // Backend already made the new workspace active — refresh the shared
+      // context so the switcher (and its active checkmark) picks that up.
+      await refresh();
+      setShowCreate(false);
+      setNewName('');
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create workspace');
+      // Modal stays open on failure so the error message is visible.
+    } finally {
+      setCreating(false);
+    }
   }
 
   const displayName = activeWorkspace?.name ?? (loading ? cachedName : null) ?? 'Workspace';
@@ -93,8 +131,50 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
           ) : null}
         </button>
       ))}
+
+      {!loading && (
+        <>
+          <div className="my-1 border-t border-bg-border/60" />
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs text-text-secondary hover:text-text-primary hover:bg-bg-subtle transition-colors"
+          >
+            <Plus size={13} className="text-text-disabled shrink-0" />
+            <span>Create workspace</span>
+          </button>
+        </>
+      )}
     </div>
   ) : null;
+
+  const createModal = (
+    <Modal
+      open={showCreate}
+      onClose={() => { if (!creating) setShowCreate(false); }}
+      title="Create workspace"
+    >
+      <div className="space-y-4">
+        <Input
+          label="Workspace name"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="e.g. Acme Agency"
+          autoFocus
+          disabled={creating}
+        />
+        {createError && <p className="text-xs text-danger-text">{createError}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setShowCreate(false)} disabled={creating}>
+            Cancel
+          </Button>
+          <Button variant="primary" size="sm" loading={creating} disabled={creating || !newName.trim()} onClick={submitCreate}>
+            Create workspace
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 
   if (collapsed) {
     return (
@@ -109,6 +189,7 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
           <LogoIcon size={28} />
         </button>
         {dropdown}
+        {createModal}
       </div>
     );
   }
@@ -130,6 +211,7 @@ export function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitcherProps)
         />
       </button>
       {dropdown}
+      {createModal}
     </div>
   );
 }
