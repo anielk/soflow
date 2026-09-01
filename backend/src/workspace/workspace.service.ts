@@ -52,6 +52,19 @@ export interface AdminWorkspaceListItem {
   updatedAt: Date;
 }
 
+/** One entry in the caller's own workspace list — see WorkspaceService.listMine. */
+export interface WorkspaceMembershipSummary {
+  id: string;
+  name: string;
+  slug: string;
+  hasLogo: boolean;
+  // WorkspaceMember.role — this caller's role WITHIN this workspace, never
+  // to be confused with their global User.role (see resolveMembership's
+  // comment below).
+  role: Role;
+  isActive: boolean;
+}
+
 @Injectable()
 export class WorkspaceService {
   private readonly logger = new Logger(WorkspaceService.name);
@@ -72,9 +85,10 @@ export class WorkspaceService {
   /**
    * Duplicated from MediaService.resolveWorkspaceId rather than importing
    * MediaModule for one small helper unrelated to media — see that method's
-   * own comment for why this resolves the user's first membership (the JWT
-   * carries no workspaceId, and multi-workspace-per-user isn't exposed in
-   * the UI yet).
+   * own comment for the same duplication in PostsService/AuditService/
+   * ActivityService. Every copy resolves the same way: the caller's active
+   * workspace (see resolveMembership below), never a workspace ID taken
+   * from the request.
    */
   async resolveWorkspaceId(userId: string): Promise<string> {
     return (await this.resolveMembership(userId)).workspaceId;
@@ -91,16 +105,88 @@ export class WorkspaceService {
    * fixed during the Beta stabilization sprint: registration now creates an
    * OWNER membership, but addMember/update/uploadLogo were still checking
    * the caller's global role, which is USER, and rejecting them).
+   *
+   * "Current workspace" resolution: prefer User.activeWorkspaceId (set at
+   * registration, on workspace creation, and by switchActiveWorkspace —
+   * never trusted from a request, only ever written here after checking a
+   * real WorkspaceMember row exists). Falls back to the caller's oldest
+   * membership when activeWorkspaceId is null (a pre-migration edge case
+   * shouldn't exist after the backfill, but a defensive default costs
+   * nothing) or when it points at a workspace the caller is no longer a
+   * member of (e.g. they were removed) — never trust the stored id alone
+   * without re-checking membership.
    */
   async resolveMembership(userId: string): Promise<{ workspaceId: string; role: Role }> {
-    const membership = await this.prisma.workspaceMember.findFirst({
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } });
+    if (user?.activeWorkspaceId) {
+      const active = await this.prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      });
+      if (active) return { workspaceId: active.workspaceId, role: active.role };
+    }
+
+    const fallback = await this.prisma.workspaceMember.findFirst({
       where: { userId },
       orderBy: { joinedAt: 'asc' },
     });
-    if (!membership) {
+    if (!fallback) {
       throw new ForbiddenException('You are not a member of any workspace.');
     }
-    return { workspaceId: membership.workspaceId, role: membership.role };
+    return { workspaceId: fallback.workspaceId, role: fallback.role };
+  }
+
+  /**
+   * Every workspace the caller belongs to, with their per-workspace role and
+   * which one is currently active — powers the frontend workspace switcher.
+   * `isActive` is derived from the same resolution resolveMembership uses
+   * (activeWorkspaceId, falling back to the oldest membership), so this list
+   * and every other workspace-scoped endpoint always agree on "current".
+   */
+  async listMine(userId: string): Promise<WorkspaceMembershipSummary[]> {
+    const [user, memberships] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } }),
+      this.prisma.workspaceMember.findMany({
+        where: { userId },
+        orderBy: { joinedAt: 'asc' },
+        include: { workspace: true },
+      }),
+    ]);
+
+    const activeWorkspaceId = user?.activeWorkspaceId ?? memberships[0]?.workspaceId ?? null;
+
+    return memberships.map((m) => ({
+      id: m.workspace.id,
+      name: m.workspace.name,
+      slug: m.workspace.slug,
+      hasLogo: Boolean(m.workspace.logoUrl),
+      role: m.role,
+      isActive: m.workspace.id === activeWorkspaceId,
+    }));
+  }
+
+  /**
+   * Switches which workspace resolveMembership treats as "current" for this
+   * user. The membership check below is the entire security boundary here:
+   * a WorkspaceMember row for (workspaceId, userId) must exist, or this
+   * throws ForbiddenException — a crafted/guessed workspace ID can never
+   * become active without a real membership, regardless of what the client
+   * sends. Never trust the frontend's own idea of which workspace is
+   * active; this is the only place activeWorkspaceId is ever written.
+   */
+  async switchActiveWorkspace(userId: string, workspaceId: string): Promise<WorkspaceResponse> {
+    const membership = await this.prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+    });
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of that workspace.');
+    }
+
+    const [, workspace] = await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { activeWorkspaceId: workspaceId } }),
+      this.prisma.workspace.findUniqueOrThrow({ where: { id: workspaceId } }),
+    ]);
+
+    return this.toResponse(workspace);
   }
 
   private assertCanManage(role: Role): void {
@@ -123,15 +209,16 @@ export class WorkspaceService {
    * copy: "a user can be a member of multiple workspaces... nothing
    * assumes a single workspace exists").
    *
-   * Workspace + OWNER membership are created in one transaction for the
-   * same reason AuthService.register does it: a failure partway through
-   * must never leave an ownerless workspace or a membership pointing at a
-   * workspace that doesn't exist.
+   * Workspace + OWNER membership + activating it are created in one
+   * transaction for the same reason AuthService.register does it: a
+   * failure partway through must never leave an ownerless workspace, a
+   * membership pointing at a workspace that doesn't exist, or an
+   * activeWorkspaceId pointing at a workspace whose creation rolled back.
    *
-   * Deliberately does NOT change which workspace resolveMembership treats
-   * as "current" for this user (still their oldest membership) — there is
-   * no workspace-switcher yet. This is a real, working primitive; making
-   * it the user's active dashboard workspace is a separate feature.
+   * Switches the caller into the new workspace immediately (sets it as
+   * their active workspace) — creating a workspace and then still looking
+   * at your old one would be a confusing dead end now that switching is a
+   * real, visible feature (see WorkspaceService.switchActiveWorkspace).
    */
   async create(userId: string, dto: CreateWorkspaceDto): Promise<WorkspaceResponse> {
     const workspace = await this.prisma.$transaction(async (tx) => {
@@ -140,6 +227,7 @@ export class WorkspaceService {
       await tx.workspaceMember.create({
         data: { workspaceId: txWorkspace.id, userId, role: Role.OWNER },
       });
+      await tx.user.update({ where: { id: userId }, data: { activeWorkspaceId: txWorkspace.id } });
       return txWorkspace;
     });
 

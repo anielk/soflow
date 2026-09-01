@@ -27,9 +27,17 @@ export class ActivityService {
 
   /** Same pattern as AuditService.resolveOwnWorkspaceId — see its comment. */
   async resolveOwnWorkspaceId(userId: string): Promise<string> {
-    const membership = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
-    if (!membership) throw new Error('User is not a member of any workspace.');
-    return membership.workspaceId;
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } });
+    if (user?.activeWorkspaceId) {
+      const active = await this.prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      });
+      if (active) return active.workspaceId;
+    }
+
+    const fallback = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
+    if (!fallback) throw new Error('User is not a member of any workspace.');
+    return fallback.workspaceId;
   }
 
   async record(event: SystemEvent): Promise<void> {

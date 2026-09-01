@@ -19,6 +19,7 @@ import { UpdateWorkspaceStatusDto } from './dto/update-workspace-status.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { AddCreatorDto } from './dto/add-creator.dto';
 import { UpdateCreatorDto } from './dto/update-creator.dto';
+import { SwitchActiveWorkspaceDto } from './dto/switch-active-workspace.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workspace')
@@ -28,6 +29,25 @@ export class WorkspaceController {
   @Get()
   getWorkspace(@Req() req: any) {
     return this.workspaceService.getWorkspace(req.user.userId);
+  }
+
+  // Every workspace the caller belongs to, with which one is currently
+  // active — powers the frontend workspace switcher. Static 'mine' segment,
+  // same reasoning as 'admin'/'locale-options'/etc below: never collides
+  // with the dynamic creator routes.
+  @Get('mine')
+  listMine(@Req() req: any) {
+    return this.workspaceService.listMine(req.user.userId);
+  }
+
+  // Switches the caller's active workspace. workspaceId always comes from
+  // the request body, but WorkspaceService.switchActiveWorkspace is the
+  // real boundary: it 403s unless a WorkspaceMember row for (workspaceId,
+  // userId) actually exists, so this can never activate a workspace the
+  // caller doesn't belong to no matter what ID is sent.
+  @Post('active')
+  switchActive(@Body() dto: SwitchActiveWorkspaceDto, @Req() req: any) {
+    return this.workspaceService.switchActiveWorkspace(req.user.userId, dto.workspaceId);
   }
 
   // Any authenticated user may create an additional workspace, becoming its

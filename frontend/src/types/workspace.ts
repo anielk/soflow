@@ -120,6 +120,17 @@ export interface AdminWorkspaceListItem {
   updatedAt:   string;
 }
 
+/** One workspace the signed-in user belongs to — see lib/workspace.ts's listMyWorkspaces, powers the sidebar workspace switcher. */
+export interface WorkspaceMembershipSummary {
+  id:       string;
+  name:     string;
+  slug:     string;
+  hasLogo:  boolean;
+  // WorkspaceMember.role for THIS workspace — never the global User.role.
+  role:     string;
+  isActive: boolean;
+}
+
 export interface WorkspaceMemberRecord {
   id:       string;
   role:     string;

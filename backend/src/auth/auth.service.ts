@@ -103,9 +103,10 @@ export class AuthService {
    * membership in it — otherwise every workspace-scoped endpoint
    * (dashboard, members, creators, media, ...) 403s with "not a member of
    * any workspace" the moment they log in. User + Workspace +
-   * WorkspaceMember are created in one transaction so a failure partway
-   * through can never leave a user without a workspace, or a workspace
-   * without an owner.
+   * WorkspaceMember + activating that workspace are created in one
+   * transaction so a failure partway through can never leave a user
+   * without a workspace, a workspace without an owner, or a user whose
+   * activeWorkspaceId points nowhere.
    */
   async register(dto: RegisterDto, ipAddress?: string, userAgent?: string): Promise<RegisterResponseDto> {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -132,7 +133,12 @@ export class AuthService {
           data: { workspaceId: txWorkspace.id, userId: txUser.id, role: Role.OWNER },
         });
 
-        return { user: txUser, workspace: txWorkspace };
+        const updatedUser = await tx.user.update({
+          where: { id: txUser.id },
+          data: { activeWorkspaceId: txWorkspace.id },
+        });
+
+        return { user: updatedUser, workspace: txWorkspace };
       });
       user = created.user;
       workspace = created.workspace;

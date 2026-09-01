@@ -12,12 +12,36 @@ import type {
   NewWorkspaceMember,
   OnboardingStatus,
   WorkspaceMemberRecord,
+  WorkspaceMembershipSummary,
   WorkspaceProfile,
 } from '@/types/workspace';
 
 export async function getWorkspace(): Promise<WorkspaceProfile> {
   const response = await fetch(apiUrl('/workspace'), { headers: authHeaders(), cache: 'no-store' });
   await throwOnError(response, 'Failed to load workspace');
+  return response.json();
+}
+
+/** Every workspace the signed-in user belongs to, with which one is currently active. Powers the sidebar workspace switcher. */
+export async function listMyWorkspaces(): Promise<WorkspaceMembershipSummary[]> {
+  const response = await fetch(apiUrl('/workspace/mine'), { headers: authHeaders(), cache: 'no-store' });
+  await throwOnError(response, 'Failed to load your workspaces');
+  return response.json();
+}
+
+/**
+ * Switches the caller's active workspace. The backend is the actual
+ * security boundary (it 403s unless a real WorkspaceMember row exists for
+ * this workspace) — this call can't activate a workspace the caller isn't
+ * a member of no matter what id is passed.
+ */
+export async function switchActiveWorkspace(workspaceId: string): Promise<WorkspaceProfile> {
+  const response = await fetch(apiUrl('/workspace/active'), {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspaceId }),
+  });
+  await throwOnError(response, 'Failed to switch workspace');
   return response.json();
 }
 

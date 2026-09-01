@@ -38,19 +38,30 @@ export class PostsService {
   ) {}
 
   /**
-   * Same resolution as MediaService/WorkspaceService: the JWT carries no
-   * workspaceId, so a caller's first membership stands in for "their
-   * workspace" until workspace switching exists in the UI.
+   * Same resolution as MediaService/WorkspaceService (see WorkspaceService's
+   * comment for the full explanation): the JWT carries no workspaceId, so
+   * "current workspace" is the caller's User.activeWorkspaceId — set at
+   * registration, on workspace creation, and by
+   * WorkspaceService.switchActiveWorkspace, never trusted from a request —
+   * falling back to their oldest membership if it's null or stale.
    */
   private async resolveMembership(userId: string): Promise<{ workspaceId: string; role: Role }> {
-    const membership = await this.prisma.workspaceMember.findFirst({
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } });
+    if (user?.activeWorkspaceId) {
+      const active = await this.prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      });
+      if (active) return { workspaceId: active.workspaceId, role: active.role };
+    }
+
+    const fallback = await this.prisma.workspaceMember.findFirst({
       where: { userId },
       orderBy: { joinedAt: 'asc' },
     });
-    if (!membership) {
+    if (!fallback) {
       throw new ForbiddenException('You are not a member of any workspace.');
     }
-    return { workspaceId: membership.workspaceId, role: membership.role };
+    return { workspaceId: fallback.workspaceId, role: fallback.role };
   }
 
   /** Throws NotFoundException rather than leaking whether a media ID exists in a different workspace. */

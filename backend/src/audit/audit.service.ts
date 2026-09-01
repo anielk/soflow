@@ -36,15 +36,26 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Duplicated small helper (same pattern as WorkspaceService/MediaService,
-   * see their comments for why) — lets a non-SUPER_ADMIN caller query their
-   * own workspace's history (e.g. a Creator detail page's Audit tab)
+   * Duplicated small helper (same pattern as WorkspaceService/MediaService/
+   * PostsService, see WorkspaceService.resolveMembership's comment for the
+   * full explanation) — lets a non-SUPER_ADMIN caller query their own
+   * active workspace's history (e.g. a Creator detail page's Audit tab)
    * without granting them the unrestricted, all-workspaces admin view.
+   * Resolves User.activeWorkspaceId, falling back to the oldest membership
+   * if it's null or the caller is no longer a member of it.
    */
   async resolveOwnWorkspaceId(userId: string): Promise<string> {
-    const membership = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
-    if (!membership) throw new Error('User is not a member of any workspace.');
-    return membership.workspaceId;
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } });
+    if (user?.activeWorkspaceId) {
+      const active = await this.prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      });
+      if (active) return active.workspaceId;
+    }
+
+    const fallback = await this.prisma.workspaceMember.findFirst({ where: { userId }, orderBy: { joinedAt: 'asc' } });
+    if (!fallback) throw new Error('User is not a member of any workspace.');
+    return fallback.workspaceId;
   }
 
   async record(event: SystemEvent): Promise<void> {

@@ -19,7 +19,11 @@ function buildTx() {
   const createdWorkspace = { id: 'ws-1', name: 'newagency', slug: 'newagency' };
   return {
     tx: {
-      user: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(createdUser) },
+      user: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(createdUser),
+        update: jest.fn().mockResolvedValue({ ...createdUser, activeWorkspaceId: createdWorkspace.id }),
+      },
       workspace: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue(createdWorkspace) },
       workspaceMember: { create: jest.fn().mockResolvedValue({}) },
     },
@@ -79,6 +83,19 @@ describe('AuthService.register', () => {
     const registeredEvent = systemEvents.publish.mock.calls.find((call: any[]) => call[0].type === 'user.registered');
     expect(registeredEvent![0].ipAddress).toBeUndefined();
     expect(registeredEvent![0].userAgent).toBeUndefined();
+  });
+
+  it('sets the new workspace as the user\'s active workspace', async () => {
+    const { tx, createdUser, createdWorkspace } = buildTx();
+    const prisma = { $transaction: jest.fn((cb: any) => cb(tx)) };
+    const { service } = buildService({ prisma });
+
+    await service.register({ email: 'new@example.com', password: 'testpass123', username: 'newagency' });
+
+    expect(tx.user.update).toHaveBeenCalledWith({
+      where: { id: createdUser.id },
+      data: { activeWorkspaceId: createdWorkspace.id },
+    });
   });
 
   it('does not publish any audit event for a failed (duplicate email) registration', async () => {

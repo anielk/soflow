@@ -36,10 +36,19 @@ model User {
   resetTokenExpiresAt DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+  // Which of this user's WorkspaceMember rows is "current" — see
+  // WorkspaceService.resolveMembership for the resolution + fallback logic.
+  // SetNull (not Cascade) so deleting a workspace never cascades into
+  // deleting the user themselves; resolveMembership falls back to their
+  // oldest remaining membership when this is null or stale.
+  activeWorkspaceId   String?
+  activeWorkspace     Workspace?        @relation("UserActiveWorkspace", fields: [activeWorkspaceId], references: [id], onDelete: SetNull)
   creatorProfile      CreatorProfile?
   workspaceMembers    WorkspaceMember[]
   media               Media[]
   posts               Post[]
+
+  @@index([activeWorkspaceId])
 }
 
 model CreatorProfile {
@@ -96,6 +105,9 @@ model Workspace {
   media           Media[]
   creators        Creator[]
   posts           Post[]
+  // Back-relation required by Prisma for User.activeWorkspace — not queried
+  // directly anywhere (a workspace doesn't need to know who has it active).
+  activeForUsers  User[]            @relation("UserActiveWorkspace")
 }
 
 model WorkspaceMember {

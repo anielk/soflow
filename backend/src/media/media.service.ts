@@ -50,10 +50,11 @@ export class MediaService {
   ) {}
 
   /**
-   * The JWT carries no workspaceId (auth predates multi-workspace UI) and the
-   * schema's own comment notes workspace enforcement is intentionally open —
-   * so we resolve a user's first membership. Revisit once workspace
-   * switching exists in the UI.
+   * The JWT carries no workspaceId (identity only) — so "which workspace"
+   * comes from the caller's active-workspace preference instead. See
+   * resolveMembership below for the actual resolution/fallback; duplicated
+   * across MediaService/PostsService/WorkspaceService/AuditService/
+   * ActivityService rather than sharing one module for a two-query helper.
    */
   async resolveWorkspaceId(userId: string): Promise<string> {
     return (await this.resolveMembership(userId)).workspaceId;
@@ -67,16 +68,30 @@ export class MediaService {
    * the JWT, or a workspace's own OWNER can never manage anyone else's
    * files (same class of bug fixed in WorkspaceService during the Beta
    * stabilization sprint).
+   *
+   * "Current workspace": User.activeWorkspaceId (see
+   * WorkspaceService.switchActiveWorkspace — the only place that's ever
+   * written, always after checking a real membership exists), falling back
+   * to the caller's oldest membership if it's null or stale (they were
+   * removed from that workspace since).
    */
   async resolveMembership(userId: string): Promise<{ workspaceId: string; role: Role }> {
-    const membership = await this.prisma.workspaceMember.findFirst({
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { activeWorkspaceId: true } });
+    if (user?.activeWorkspaceId) {
+      const active = await this.prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: user.activeWorkspaceId, userId } },
+      });
+      if (active) return { workspaceId: active.workspaceId, role: active.role };
+    }
+
+    const fallback = await this.prisma.workspaceMember.findFirst({
       where: { userId },
       orderBy: { joinedAt: 'asc' },
     });
-    if (!membership) {
+    if (!fallback) {
       throw new ForbiddenException('You are not a member of any workspace.');
     }
-    return { workspaceId: membership.workspaceId, role: membership.role };
+    return { workspaceId: fallback.workspaceId, role: fallback.role };
   }
 
   async upload(file: Express.Multer.File, userId: string, creatorId?: string, callerRole?: Role): Promise<MediaResponse> {
